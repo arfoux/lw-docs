@@ -39,5 +39,8 @@ jobs:
       - name: Build combined docs reader
         run: node scripts/build-docs-reader.mjs
 
+      - name: Assert reader is not empty
+        run: node -e "const h=require('fs').readFileSync('dist/docs/read/index.html','utf8'); if(!h.includes('reader__section')||!h.includes('cloudflare workers')){console.error('reader empty');process.exit(3)} console.log('reader ok')"
+
       - name: Deploy to Cloudflare Workers
         run: npx wrangler deploy
