@@ -1,0 +1,88 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const guardPort = `// registry.json → "guards": { "seal": "seal-guard" }
+// ports/seal-guard.mjs
+export default {
+  async user(ctx) {
+    const id = await readToken(ctx.request, ctx.app.env.SEAL_KEY);
+    return id === null ? null : ctx.app.models.User.find(ctx.app.db, id);
+  },
+};`;
+---
+
+<Docs
+  title="Auth & sessions"
+  description="Session guard, remember-me, CSRF, policies, throttling, and the guard port for a driver the app registers itself."
+  slug="auth"
+  lead="Auth is compiled, not delegated: the session guard, the CSRF middleware and the throttle run on the Workers kernel. The one thing that cannot be compiled is a guard driver your app defines in PHP."
+  source={`README.md §Compiles today, §A guard port; COMPILED.md; README §Auth row — repository ${site.source}`}
+>
+  <h2 id="session-guard">The session guard</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">surface</th><th scope="col">verdict</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="mono">Auth::attempt / login / logout</th><td>compiled, byte-parity with PHP 8.3 (13 guard runs)</td></tr>
+        <tr><th scope="row" class="mono">remember-me, recaller cookie</th><td>compiled, with token rotation</td></tr>
+        <tr><th scope="row" class="mono">EloquentUserProvider</th><td>compiled against your model</td></tr>
+        <tr><th scope="row" class="mono">BcryptHasher</th><td>bcryptjs with <code>$2y$</code> ⇄ <code>$2b$</code> parity both ways</td></tr>
+        <tr><th scope="row" class="mono">auth, guest, auth.basic middleware</th><td>compiled, including 401 JSON vs redirect</td></tr>
+        <tr><th scope="row" class="mono">Gate::allows / denies</th><td>policies compiled at build time; the <code>before()</code> hook honoured</td></tr>
+        <tr><th scope="row" class="mono">Gate::authorize / any / define</th><td class="txt-blocked">fails loud — use <code>allows()</code>/<code>denies()</code>, or a port</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <MiniFig name="session-flow" />
+
+  <h2 id="session-csrf">Session and CSRF</h2>
+  <p>
+    Sessions live in D1 (the <code>database</code> driver) and carry flash data, rotation,
+    <code>migrate</code>/<code>regenerate</code>/<code>invalidate</code>, the token plumbing and the
+    <code>PreventRequestForgery</code> middleware. <code>@csrf</code> and <code>@method</code> work
+    inside compiled views; the token is compared in constant time like Laravel does.
+  </p>
+  <p class="small muted">
+    Cookie encryption is the Encrypter parity path: AES-256-CBC with an HMAC, over WebCrypto, using
+    the same key derivation and serialization as PHP. A cookie minted by Laravel opens at the edge
+    and the reverse — which is what lets you run both during a migration.
+  </p>
+
+  <h2 id="throttle">Throttling</h2>
+  <p>
+    Numeric <code>throttle:n[,m]</code> is wired over the D1-backed <code>database</code> cache
+    store, with the same counter semantics as Laravel. A <em>named</em> rate limiter needs its
+    <code>AppServiceProvider</code> definition, which the build cannot run — it fails loud and asks
+    you to write the numbers inline.
+  </p>
+
+  <h2 id="guard-ports">When your app registers its own guard</h2>
+  <p>
+    <code>Auth::extend('seal', …)</code> is a PHP closure. The compiled rung cannot run it, and
+    silently answering “no user” would let a guarded route through — so the build refuses, at
+    config level, before any route is compiled. The way out is a guard port: declare the driver and
+    provide <code>user(ctx)</code>.
+  </p>
+  <MiniFig name="guard-port" />
+  <Code file="ports/seal-guard.mjs" code={guardPort} />
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">rule</th><th scope="col">why</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">the module exports <code>user(ctx)</code></th><td>required; a port without it is refused at build time</td></tr>
+        <tr><th scope="row">throw on failure, return <code>null</code> for a guest</th><td>a throwing port keeps throwing: a failure never degrades into “no user”</td></tr>
+        <tr><th scope="row">call via <code>ctx.app.*</code></th><td>bindings are <code>ctx.app.env</code>, <code>ctx.app.db</code>, <code>ctx.app.models</code> — never at the top level</td></tr>
+        <tr><th scope="row">once per guard per request</th><td><code>PortedGuard</code> memoises; the memo drops on <code>setRequest()</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">
+    Only the driver is yours. <code>auth:seal</code> still resolves through the compiled
+    <code>Authenticate</code> middleware; <code>auth()-&gt;user()</code>, the
+    <code>guest</code> middleware, the 401/redirect and <code>Auth::viaRemember</code> stay compiled.
+  </p>
+</Docs>

@@ -1,13 +1,14 @@
 ---
 import { number } from '../lib/report.js';
 
-const { count, verdict, label, width = '4rem' } = Astro.props;
+const { count, verdict, label, note = null, width = '4rem' } = Astro.props;
 const colour = { compiles: 'var(--compiles)', 'fails-loud': 'var(--blocked)', documented: 'var(--documented)' }[verdict] ?? 'var(--fg)';
 ---
 
 <div class="stat" style={`--w:${width}`}>
   <span class="stat__value" style={`color:${colour}`}>{number(count)}</span>
   <span class="stat__label">{label}</span>
+  {note && <span class="stat__note">{note}</span>}
 </div>
 
 <style>
@@ -31,5 +32,11 @@ const colour = { compiles: 'var(--compiles)', 'fails-loud': 'var(--blocked)', do
   .stat__label {
     font-size: var(--step--1);
     color: var(--fg-muted);
+  }
+
+  .stat__note {
+    font-size: var(--step--1);
+    color: var(--fg-muted);
+    opacity: 0.75;
   }
 </style>

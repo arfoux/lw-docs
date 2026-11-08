@@ -1,0 +1,129 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const refusal = `READINESS: DOES NOT RUN
+  the edge cannot serve this (1):
+    POST /queue/push  dispatches a queued job, but the worker has no build-time cron trigger
+      -> declare the cron secret and a Cloudflare Queues consumer, or move the work to a
+         D1 table the schedule reads`;
+
+---
+
+<Docs
+  title="Limits"
+  description="What does not run at the edge, why it fails loud, and the honest edge of the runs-on-the-edge claim."
+  slug="limits"
+  lead="Every toolchain has a boundary. This page is the boundary written down: what the compiler refuses, what the platform cannot do, and what the verdict does not promise."
+  source={`README.md §Fails loud, §What RUNS ON THE EDGE claims; COMPILED.md §Free-plan budget; docs/READINESS.md — repository ${site.source}`}
+>
+  <h2 id="refusals">Refusals</h2>
+  <p>
+    These fail the build. Each one has a way out; none of them fails at request time in production.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">construct</th><th scope="col">why</th><th scope="col">the way out</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row" class="mono">Blade &lt;x-…&gt; components</th>
+          <td>they compile to a view runtime the edge does not carry</td>
+          <td>inline the partial, or a port</td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">Queue::push(SomeJob::class)</th>
+          <td>nothing would consume the job at the edge; the binding carries JSON, not a PHP job</td>
+          <td>Cloudflare Queues with a consumer you write, or a D1 table a cron reads</td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">Storage::disk('named')</th>
+          <td>each named disk needs its own bucket; R2 asks for a credit card</td>
+          <td>the default disk, or an explicit R2 binding</td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">Cache::tags()</th>
+          <td>the D1 <code>database</code> store has no tags — Laravel throws there too</td>
+          <td>drop the tags</td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">CORS config</th>
+          <td>the <code>Access-Control-*</code> headers would be missing</td>
+          <td>declare the routes in <code>registry.json</code> <code>ignore</code></td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">config('app.custom')</th>
+          <td>the runtime dump carries framework keys plus declared groups; without a declaration the edge would answer <code>null</code> where PHP answers a value</td>
+          <td><code>registry.json</code> → <code>"config": ["app"]</code> (declare only public data)</td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">a non-session auth driver (Auth::extend)</th>
+          <td>the registering closure is PHP the rung cannot run</td>
+          <td>a <a href="/docs/auth/">guard port</a></td>
+        </tr>
+        <tr>
+          <th scope="row" class="mono">controller code outside the subset</th>
+          <td>the transpiler fails rather than mistranslate</td>
+          <td><code>ports/</code> handler, or move the logic to HTTP</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <Code file="the READINESS block" code={refusal} />
+  <p class="small muted">
+    The cause line is the compiler's own text; the block is printed after a failed build, with the
+    route it belongs to on the left.
+  </p>
+
+  <MiniFig name="limits-wall" />
+
+  <h2 id="platform">What the platform cannot do</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">need</th><th scope="col">at the edge</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">image resizing (GD/Imagick)</th><td>no image library — Cloudflare Images, or resize at build time</td></tr>
+        <tr><th scope="row">processes (exec, proc_open, pcntl)</th><td>no OS process — an HTTP service from a port, or a cron-triggered job</td></tr>
+        <tr><th scope="row">WebSockets / broadcasting</th><td>a Durable Object or an external service; SSE or polling as the padanan</td></tr>
+        <tr><th scope="row">SMTP mail</th><td>impossible — the mailer is HTTP (Resend, or a provider you call)</td></tr>
+        <tr><th scope="row">Redis</th><td>KV or D1 drivers, or Upstash over REST</td></tr>
+        <tr><th scope="row">a local filesystem</th><td>no <code>public_path</code>/<code>file_exists</code> at runtime — build-time only; storage is the blob store or R2</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="free-plan">The Free plan, which shapes everything</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">resource</th><th scope="col">free plan</th><th scope="col">what it means</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">CPU per request</th><td class="mono">10 ms</td><td>the compiled handler budget is p95 ≤ 5 ms; enforcement is softer than the docs (a per-isolate rollover bank)</td></tr>
+        <tr><th scope="row">requests</th><td class="mono">100k / day</td><td>static assets do not count</td></tr>
+        <tr><th scope="row">subrequests</th><td class="mono">50 / request</td><td>the reason eager loading and query counts matter</td></tr>
+        <tr><th scope="row">D1 writes / reads</th><td class="mono">100k / 5M per day</td><td>cookie sessions write zero rows; throttle only where it is needed</td></tr>
+        <tr><th scope="row">objects</th><td class="mono">1.5 MB / object</td><td>the D1 blob store, no card. R2 for bigger or many — and R2 asks for a card</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="not-data">The verdict is about routes, not data</h2>
+  <p>
+    <code>RUNS ON THE EDGE</code> means every route has a compiled handler, a snapshot or a port;
+    nothing is ignored by accident; no binding is missing. It does <strong>not</strong> mean your
+    database is populated. <code>deploy</code> provisions D1 and applies the schema to an empty
+    database; the rows are whoever wrote them.
+  </p>
+  <p>
+    It also does not mean a prerendered page reflects live data. A page that reads rows the build has
+    never seen prerenders as it looks with an empty table — the honest consequence of rendering at
+    build time. Run against real data after the schema apply, or decide such a route explicitly.
+  </p>
+
+  <h2 id="divergences">Known divergences</h2>
+  <ul>
+    <li><strong>Time:</strong> the compiled rung answers dates in UTC (the Workers timezone) while Laravel uses <code>config('app.timezone')</code>. An app with a non-UTC timezone gets different dates at the edge — documented, not hidden.</li>
+    <li><strong>Empty-database prerender:</strong> as above, snapshots are as-of-build.</li>
+    <li><strong>Local-only pages:</strong> 26 of the 105 Laravel documentation pages describe tooling that is not part of a deployed app (Artisan, Dusk, Sail, Telescope, Horizon dashboards). The <a href="/audit/coverage/">coverage table</a> names all of them.</li>
+  </ul>
+</Docs>

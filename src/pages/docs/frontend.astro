@@ -1,0 +1,74 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const build = `# what the build runs for a fullstack app, in your app directory
+bun install            # only when node_modules is absent
+bun run build          # your package.json "build"
+# falls back to npm install / npm run build when bun is missing or fails`;
+---
+
+<Docs
+  title="Frontend & assets"
+  description="Vite runs at build time, the manifest is verified, and static assets share the Worker's origin."
+  slug="frontend"
+  lead="The backend is compiled; the frontend is built — by your own toolchain, during the same build, and served from the same origin."
+  source={`README.md §Fullstack app vs backend-only API — repository ${site.source}`}
+>
+  <h2 id="two-halves">Two halves, decided before anything ships</h2>
+  <p>
+    Before compiling, the build scans <code>resources/views/**</code> for <code>@vite</code> or
+    <code>mix()</code>. That decides whether your app needs a frontend build at all:
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">your app</th><th scope="col">needs public/build?</th><th scope="col">what the build does</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row">fullstack</th>
+          <td><strong>yes</strong> — a stock <code>laravel new</code> qualifies</td>
+          <td>runs your <code>package.json</code> <code>build</code> script (Bun first, npm as the automatic fallback), then verifies <code>public/build/manifest.json</code></td>
+        </tr>
+        <tr>
+          <th scope="row">backend-only</th>
+          <td>no — nothing reads it</td>
+          <td>logs <code>backend-only (no frontend build needed)</code> and proceeds</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <Code file="build steps" code={build} />
+  <p>
+    The decision happens up front, not after shipping <code>&lt;script src&gt;</code> tags that
+    point at files nobody built. When there is nothing it can run — no <code>package.json</code>, no
+    build script, neither Bun nor npm on <code>PATH</code>, or the build itself fails — it stops with
+    the view and the command that failed, named.
+  </p>
+
+  <MiniFig name="frontend-halves" />
+
+  <h2 id="origin">One origin</h2>
+  <p>
+    The result (<code>public/build</code>) is copied to <code>dist/public</code> and served by
+    Workers Static Assets, from the same origin as the worker. There is no second port in
+    production; the <code>artisan serve</code> + Vite pair exists only under
+    <code>composer run dev</code>. Asset requests are static: they never invoke the worker.
+  </p>
+
+  <h2 id="deps">What touches the network</h2>
+  <p>
+    Dependencies are installed only when <code>node_modules</code> is absent, so an existing tree is
+    never modified. That install is the only network step in the frontend path; the compiler itself
+    needs no network once the vendor tree exists.
+  </p>
+
+  <h2 id="vite">Why Vite stays Vite</h2>
+  <p>
+    The toolchain compiles the backend and leaves the frontend to the tool you already chose. Vite
+    produces the manifest; the compiled views read it at runtime exactly as Laravel's
+    <code>@vite</code> directive would. No bundler plugin, no second config file, no rewrite of your
+    assets.
+  </p>
+</Docs>

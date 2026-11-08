@@ -1,0 +1,16 @@
+---
+// A terminal transcript. `lines` are { t, tone } where tone is one of
+// 'p' (prompt), 'ok', 'warn', 'dim' or undefined. Colour is decorative: the text
+// alone says the same thing.
+const { title = 'laravel-workers', lines } = Astro.props;
+---
+
+<div class="term" role="group" aria-label={`terminal: ${title}`}>
+  <div class="term__bar" aria-hidden="true">
+    <span></span><span></span><span></span>
+    <em>{title}</em>
+  </div>
+  <pre>{lines.map((line, index) => (
+    <span class={line.tone}>{line.t}{index < lines.length - 1 ? '\n' : ''}</span>
+  ))}</pre>
+</div>

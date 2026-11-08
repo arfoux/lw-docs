@@ -1,0 +1,116 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const stages = [
+  ['S0', 'dump', 'PHP boots the app and dumps what only Laravel knows: routes, compiled Blade, the schema from the migrations, config, schedule, events. The first of the build phase workers.', 'tools/*.php'],
+  ['S1', 'transpile', 'Blade to JS, routes to a router, migrations to schema.json, controllers to handlers. Outside the supported subset is a compile error (LW001 to LW004).', 'tools/*.mjs, compiler/'],
+  ['S2', 'bundler', 'The Workers-native kernel and the generated modules are bundled into one Worker ESM.', 'dist/src/worker.mjs'],
+  ['S3', 'golden tests', 'The real Laravel render and the compiled render are compared; the shadow harness diffs a whole request: status, headers, body.', 'shadow/, compiler/tests/'],
+  ['S4', 'gate', '--strict fails the build on a route with no handler, snapshot or port. The READINESS block is the verdict.', 'tools/readiness.mjs'],
+  ['S5', 'prerender', 'Clean GET routes render to static snapshots, served as assets with zero invocations. Its own phase worker, still at build time.', 'tools/prerender.php'],
+  ['S6', 'deploy', 'wrangler deploys the Worker, the static assets and D1; the state file records what was deployed.', 'tools/deploy.mjs'],
+];
+
+const tree = `compiler/          Blade to PHP to JS at build time (+ the transpiled runtime)
+kernel/            request-time runtime: http, router, db, session, csrf, auth,
+                   validator, cache, storage, mail, paginator, php-json, php-serialize
+tools/             build-time PHP + JS: schema, views, metadata, deploy, doctor, cache
+shadow/            the proof harness (real PHP app vs the compiled worker)
+build.mjs          the phase-scoped pipeline, which writes dist/
+bin/               the laravel-workers CLI`;
+---
+
+<Docs
+  title="Architecture"
+  description="S0 to S6, one Laravel boot per phase, the content-addressed build cache, and the tree the artifact is made of."
+  slug="architecture"
+  lead="PHP runs at build time only, in phase workers that each boot the app at most once. Everything the edge executes is generated JavaScript and a schema."
+  source={`README.md Architecture, Build phases, Build cache, What's inside; MAP.md sections 4 to 6 — repository ${site.source}`}
+>
+  <h2 id="pipeline">The pipeline</h2>
+  <p>
+    Seven stages, and exactly one boundary: S0 is the only stage that runs your PHP application, and
+    everything from S1 on is generated or plain JavaScript. The stage names are the repository's own.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">stage</th><th scope="col">what</th><th scope="col">where</th></tr></thead>
+      <tbody>
+        {stages.map(([id, name, what, where]) => (
+          <tr>
+            <th scope="row" class="mono">{id}</th>
+            <td><strong>{name}</strong> — {what}</td>
+            <td class="small muted mono">{where}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="boots">One boot per phase</h2>
+  <p>
+    A full build runs every PHP-live step as a phase-scoped worker. Each phase boots Laravel at most
+    once — not at all when its job list is empty — and processes every closure inside that same boot.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">phase</th><th scope="col">worker</th><th scope="col">Laravel boots</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">schema</th><td class="mono">tools/schema-compile.php</td><td>1</td></tr>
+        <tr><th scope="row">snapshots</th><td class="mono">tools/prerender.php</td><td>0–1 (when prerender URIs exist)</td></tr>
+        <tr><th scope="row">route and error views</th><td class="mono">tools/compile-view.php --batch</td><td>1</td></tr>
+        <tr><th scope="row">metadata</th><td class="mono">tools/metadata-phase.php</td><td>0–1 (models, FormRequests)</td></tr>
+        <tr><th scope="row">controller views</th><td class="mono">tools/compile-view.php --batch</td><td>0–1 (controllers)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Measured, not estimated: instrumenting every PHP process a <code>--no-cache</code> build spawns on
+    the 43-route fixture recorded <strong>exactly 5 Laravel boots</strong>, plus one
+    <code>php -r</code> version probe. Route export, config, schedule, events, class metadata and
+    controller extraction never call PHP.
+  </p>
+
+  <div class="figrow">
+    <MiniFig name="boots" />
+    <MiniFig name="cache" />
+  </div>
+
+  <h2 id="cache">The build cache</h2>
+  <p>
+    Before any live work, the build hashes its inputs by content, not mtime: app sources, Composer
+    identity files and the autoloader, build-tool sources, Vite/Tailwind/PostCSS configs and
+    manifests, <code>.env</code>, the PHP version, the CLI flags and curated <code>LW_*</code> keys.
+    On the fixture app that is 199 files, about 3.0 MB.
+  </p>
+  <ul>
+    <li>A <strong>hit</strong> needs the same key <em>and</em> the files every build emits still in <code>dist/</code>; a deleted or half-written <code>dist</code> is a miss, never a stale worker.</li>
+    <li>Measured: <strong>about 1.3 s</strong> on a hit against <strong>about 35 s</strong> full, with zero Laravel boots.</li>
+    <li><code>--no-cache</code> skips only the hit check; a forced build still refreshes the stamp.</li>
+    <li>What the key does not hash does not invalidate — that is what the escape hatch is for. CI should use <code>--no-cache</code> regardless, because a hit prints no READINESS block.</li>
+  </ul>
+
+  <h2 id="tree">What the artifact is made of</h2>
+  <Code file="repository" code={tree} />
+  <p class="small muted">
+    The published package is the same tree plus <code>docs/</code>, <code>MAP.md</code>,
+    <code>COMPILED.md</code> and <code>CHANGELOG.md</code>; the tests are excluded from the tarball.
+  </p>
+
+  <MiniFig name="proof-stack" />
+
+  <h2 id="proof">How it is proven</h2>
+  <p>Three layers of evidence, all runnable:</p>
+  <ul>
+    <li><strong>Parity</strong> — the corpus (55/55) byte-compares the compiled render against the PHP 8.3 expectation, and the shadow harness diffs whole requests against the real app.</li>
+    <li><strong>Integration</strong> — the kernel suite runs against a real in-memory SQLite, a real request pipeline and a real guard port, not mocks.</li>
+    <li><strong>Platform</strong> — <code>npm run gate:cpu</code> deploys a probe worker on a real account, reads <code>cpuTime</code> and <code>outcome</code> back through <code>wrangler tail</code>, and asserts both the budget and that a burn is caught.</li>
+  </ul>
+  <p>
+    This site's <a href="/audit/">audit</a> is a fourth layer: an independent extraction of the
+    repository's own claims, with the commit and the file attached to every figure.
+  </p>
+</Docs>

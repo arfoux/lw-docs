@@ -1,0 +1,132 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import Term from '../../components/Term.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const yml = `name: ci
+on:
+  pull_request:
+  push: { branches: [main] }
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # ... php, node, npm ci, npm run build, cp .env.example .env
+      - name: Random app_key (never production)
+        run: |
+          KEY="$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("base64"))')"
+          echo "APP_KEY=base64:\${KEY}" >> "$GITHUB_ENV"
+      - name: Edge build (--strict)
+        run: |
+          set -o pipefail
+          npx laravel-workers build --no-cache 2>&1 | tee edge-build.log
+      - name: Verdict
+        if: always()
+        uses: arfoux/laravel-workers/action/verdict@v1`;
+
+const reusable = `jobs:
+  check:
+    uses: arfoux/laravel-workers/.github/workflows/app-check.yml@v1
+    permissions: { contents: read, pull-requests: write, issues: write }
+
+  ship:
+    if: github.ref == 'refs/heads/main'
+    uses: arfoux/laravel-workers/.github/workflows/app-deploy.yml@v1
+    secrets: inherit
+    with:
+      app-url: https://my-app.example.workers.dev`;
+
+const verdict = [
+  { t: '### Verdict: RUNS WITH DECLARED GAPS', tone: 'ok' },
+  { t: '', tone: 'dim' },
+  { t: '2 declared gaps — your decision, and they ship', tone: 'dim' },
+  { t: '  GET /health    ignored in registry.json', tone: 'warn' },
+  { t: '  GET /internal  ignored in registry.json', tone: 'warn' },
+  { t: '', tone: 'dim' },
+  { t: '  what an ignored route does at the edge: the request reaches no handler', tone: 'dim' },
+  { t: '  and the platform answers 404. Laravel itself still serves it everywhere else.', tone: 'dim' },
+];
+---
+
+<Docs
+  title="CI & verdict"
+  description="The three layers of the CI contract, the copy-paste workflow, the verdict action, and the two traps that break it silently."
+  slug="ci"
+  lead="The tool decides, the reporter publishes, your pipeline schedules. The split is why a green check means something specific."
+  source={`docs/CI.md — repository ${site.source}`}
+>
+  <h2 id="layers">Three layers</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">layer</th><th scope="col">what</th><th scope="col">owns</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">tool</th><td><code>npx laravel-workers build</code> / <code>deploy</code> in your app</td><td>the verdict (<code>READINESS</code>)</td></tr>
+        <tr><th scope="row">reporter</th><td><code>action/verdict</code> in this repository</td><td>one sticky PR comment + the job summary</td></tr>
+        <tr><th scope="row">pipeline</th><td><code>ci.yml</code>/<code>deploy.yml</code> (yours) or the <code>app-*</code> workflows (ours)</td><td>when to run which</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <MiniFig name="ci-layers" />
+
+  <h2 id="workflow">The canonical workflow</h2>
+  <Code file=".github/workflows/ci.yml" code={yml} />
+  <div class="notice">
+    <strong>Two details are not optional.</strong>
+    <code>--no-cache</code>: a cache hit prints no <code>READINESS</code> block, so the reporter
+    would read an empty log and call a green build <code>BUILD FAILED</code>. And a
+    <strong>valid random <code>APP_KEY</code></strong>: compiling error views boots Laravel, and a
+    malformed key fails the build with <em>Unsupported cipher or incorrect key length</em>.
+  </div>
+
+  <h2 id="action">The reporter</h2>
+  <p>
+    <code>action/verdict</code> reads the log of <code>build --no-cache</code> (or of
+    <code>deploy</code>) and publishes one comment plus the job summary. It is fork-safe, always
+    exits 0, and never hides a gap.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">input</th><th scope="col">default</th><th scope="col">meaning</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="mono">log</th><td class="mono">edge-build.log</td><td>the build (or deploy) log to read</td></tr>
+        <tr><th scope="row" class="mono">comment</th><td class="mono">true</td><td><code>false</code> keeps the summary and skips the comment — the merge case</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <Term title="pull request comment" lines={verdict} />
+
+  <h2 id="reusable">The reusable workflows</h2>
+  <p>
+    If your app matches the defaults, skip the copying. These are trigger-agnostic: call them from
+    <code>pull_request</code>, <code>push</code> or <code>workflow_dispatch</code>.
+  </p>
+  <Code file=".github/workflows/app.yml" code={reusable} />
+  <p class="small muted">
+    <code>app-check.yml</code> assumes a normal Laravel app with <code>package-lock.json</code> and
+    <code>.env.example</code>; it takes <code>php-version</code>, <code>node-version</code>,
+    <code>working-directory</code>, <code>build-args</code>, <code>lint</code>, <code>tests</code>.
+    <code>app-deploy.yml</code> takes <code>app-url</code> (required), <code>mode</code>,
+    <code>schema</code> and needs <code>APP_KEY</code> + <code>CLOUDFLARE_API_TOKEN</code> secrets
+    and <code>CLOUDFLARE_ACCOUNT_ID</code>. Neither runs composer: <code>deploy</code> provisions the
+    vendor tree itself. They encode assumptions, so the documented pattern is the contract — fork
+    them if your app deviates.
+  </p>
+
+  <h2 id="pinning">Pin the action</h2>
+  <p>
+    Pin <code>@v1</code> — a moving major tag updated on release — or pin a full commit sha when you
+    want the reporter to be unable to change under you between runs. The workflows and the action
+    are published together with the npm package, so <code>@v1</code> always matches a released
+    <code>{site.name}</code>.
+  </p>
+</Docs>

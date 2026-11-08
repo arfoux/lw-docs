@@ -1,0 +1,107 @@
+---
+import Base from '../../layouts/Base.astro';
+import Stat from '../../components/Stat.astro';
+import Glyph from '../../components/Glyph.astro';
+import { number, headline, report, shortSha, fetchedOn } from '../../lib/report.js';
+import { site } from '../../data/site.js';
+
+const pages = [
+  {
+    href: '/audit/constructs/',
+    glyph: 'tree',
+    title: 'The census',
+    body: `${number(headline.constructs.audited)} PHP constructs, each with one verdict and the batch it was proven in. The grid is the whole claim in one screen.`,
+  },
+  {
+    href: '/audit/coverage/',
+    glyph: 'list',
+    title: 'Docs coverage',
+    body: `All ${number(headline.docs.pages)} Laravel documentation pages with the verdict the project gives them, plus the CPU measurements behind the budget.`,
+  },
+  {
+    href: '/audit/gaps/',
+    glyph: 'warn',
+    title: 'Refusals',
+    body: `The ${number(headline.constructs.failsLoud)} constructs that fail loud, where they cluster by batch, and the ${number(headline.docs.hard)} documentation pages with no compiled path.`,
+  },
+  {
+    href: '/audit/ledger/',
+    glyph: 'policy',
+    title: 'The ledger',
+    body: `The shape of the project's own audit ledger — ${number(report.playbook.counts.ledger)} suggestions, the severity spread, and how many are closed — without republishing its item text.`,
+  },
+  {
+    href: '/audit/method/',
+    glyph: 'check',
+    title: 'Method',
+    body: `${number(report.checks.length)} build-time checks, the exact files and hashes read, and an explicit list of what this audit does not claim.`,
+  },
+  {
+    href: '/audit/report/',
+    glyph: 'code',
+    title: 'Every figure',
+    body: 'The whole extraction on one page: every scalar in the payload, every row, every check — for reading and for printing.',
+  },
+];
+---
+
+<Base
+  title="The audit — laravel-workers"
+  description="An independent extraction of the laravel-workers repository: 118 constructs, 105 Laravel documentation pages, and the checks that keep every figure tied to its file."
+  provenance
+>
+  <section class="sec">
+    <div class="shell">
+      <div class="sec__head">
+        <p class="eyebrow">audit</p>
+        <h1 style="font-size: clamp(2rem, 1.5rem + 2.4vw, 3.4rem); line-height: 1.04; letter-spacing: -0.02em; margin: 0; max-width: 22ch">
+          The evidence behind the claims.
+        </h1>
+        <p>
+          This section is not written by hand. <code class="mono">scripts/extract-lw.mjs</code> reads
+          the repository's own files, recomputes their figures, cross-checks them against each
+          other, and writes the data every page here renders. A number that stops agreeing with its
+          source stops the build.
+        </p>
+      </div>
+
+      <div class="stats">
+        <Stat count={headline.constructs.audited} label="PHP constructs audited" />
+        <Stat count={headline.constructs.compiles} label="compile" note={`${number(Math.round((headline.constructs.compiles / headline.constructs.audited) * 1000) / 10)}% of the census`} />
+        <Stat count={headline.constructs.failsLoud} label="fail loud" note="refused at build time, named" />
+        <Stat count={headline.constructs.documented} label="documented" note="build-level gaps" />
+      </div>
+
+      <div class="cards cards--three" style="margin-top: 1.5rem">
+        {pages.map((page) => (
+          <a class="card" href={page.href} style="text-decoration: none">
+            <Glyph name={page.glyph} class="glyph--accent" />
+            <h3>{page.title}</h3>
+            <p>{page.body}</p>
+          </a>
+        ))}
+      </div>
+
+      <div class="notice" style="margin-top: 2rem">
+        Pinned to <a href={`https://github.com/${site.audited.repo}`}>{site.audited.repo}</a> at{' '}
+        <code class="mono">{shortSha(report.auditedRepo.head)}</code> (v{report.auditedRepo.version}),
+        extracted {fetchedOn}. The documentation and the landing page describe{' '}
+        <code class="mono">{site.source}</code> (v{site.version}); the audit kept the commit it was
+        taken from, so its figures stay reproducible.
+      </div>
+
+      <h2 style="margin-top: clamp(2.5rem, 2rem + 2vw, 4rem); font-size: var(--step-3)">
+        What this audit is not
+      </h2>
+      <p style="max-width: 44rem; color: var(--fg-muted)">
+        It is not a review of the compiler's correctness — the parity harness and the test suite own
+        that. It is a review of the repository's <em>published claims</em>: whether the numbers in
+        the README, the map and the coverage index still describe the code, and whether the wording
+        around them says more than the evidence does.
+      </p>
+      <p style="max-width: 44rem">
+        <a href="/docs/compatibility/">Read the compatibility matrix instead →</a>
+      </p>
+    </div>
+  </section>
+</Base>

@@ -1,0 +1,118 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import Term from '../../components/Term.astro';
+import { site } from '../../data/site.js';
+
+const quick = `# in a real Laravel app (vendor + public/build there)
+npm i -D laravel-workers
+
+npx laravel-workers build --strict     # compile only → dist/
+npx laravel-workers deploy             # build, then D1 (+ deploy) on request
+npx laravel-workers deploy --plan --mode 3 --d1-auto   # preview; changes nothing`;
+---
+
+<Docs
+  title="Getting started"
+  description="Install laravel-workers, compile a Laravel app to a Worker, and preview the first deploy without touching Cloudflare."
+  slug=""
+  lead="Three commands from a normal Laravel app: install, compile, deploy. The compile step gives you a verdict before anything reaches Cloudflare."
+  source={`README.md §Quick start, §Requirements, §Zero-touch — repository ${site.source} (${site.name} ${site.version})`}
+>
+  <h2 id="requirements">Requirements</h2>
+  <p>
+    Laravel is the source of truth and stays untouched; PHP is needed only while the build runs.
+    Nothing else has to be installed globally — <code>wrangler</code> is reached through
+    <code>npx</code> (a local or global Wrangler wins instead).
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">component</th><th scope="col">tested with</th><th scope="col">requirement</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Laravel</th><td class="mono">13.37.0, 11.34.2</td><td>≥ 10</td></tr>
+        <tr><th scope="row">PHP (build time only)</th><td class="mono">8.3.30</td><td>≥ 8.3; the parity oracle is 8.3.30</td></tr>
+        <tr><th scope="row">Node</th><td class="mono">22.18.0</td><td>≥ 22</td></tr>
+        <tr><th scope="row">Bun</th><td class="mono">1.4.0</td><td>≥ 1.0 (the suite passes under Bun)</td></tr>
+        <tr><th scope="row">Composer</th><td>—</td><td>not required: <code>vendor-lite</code> provisions the vendor tree from <code>composer.lock</code></td></tr>
+        <tr><th scope="row">Wrangler</th><td class="mono">4.151.1</td><td>4.x, run through <code>npx</code>; not bundled</td></tr>
+        <tr><th scope="row">PHP extensions</th><td class="mono">pdo_sqlite, sqlite3</td><td>build only, for the schema compiler</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="first-build">The first build</h2>
+  <p>
+    Run it from the app root (the directory with <code>artisan</code>). <code>--strict</code> is
+    the honest mode: a route the compiler cannot serve fails the build instead of shipping a
+    different answer than Laravel would.
+  </p>
+  <Code file="quick start" code={quick} />
+  <p>
+    The build writes <code>dist/</code>: the Worker module, the router, the compiled config and
+    views, the D1 schema, the cron list and the frontend build. A cache hit (unchanged inputs)
+    skips every Laravel boot and restores <code>dist/</code> in about a second; CI should pass
+    <code>--no-cache</code> instead, because a cache hit prints no <code>READINESS</code> block.
+  </p>
+
+  <Term
+    title="build"
+    lines={[
+      { t: '$ npx laravel-workers build --strict', tone: 'p' },
+      { t: '… schema → snapshots → views → metadata → controllers', tone: 'dim' },
+      { t: 'READINESS: RUNS ON THE EDGE', tone: 'ok' },
+      { t: '  every route is served by a compiled handler, a snapshot or a port;', tone: 'dim' },
+      { t: '  no route is ignored, and no binding is missing.', tone: 'dim' },
+    ]}
+  />
+
+  <MiniFig name="boots" />
+
+  <h2 id="zero-touch">What the build does for you</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">normally</th><th scope="col">in this toolchain</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row">composer install</th>
+          <td><code>vendor-lite</code> reads <code>composer.lock</code>, fetches dist zips from packagist, writes its own autoloader and Laravel's <code>vendor/composer/installed.json</code> so package discovery still works. Content-addressed cache: paid once per lock.</td>
+        </tr>
+        <tr>
+          <th scope="row">migrate against a real database</th>
+          <td><code>tools/schema-compile.php</code> boots the app, migrates an in-memory SQLite and dumps the DDL via pragma. Your <code>database/</code> is never touched; the output is D1-ready.</td>
+        </tr>
+        <tr>
+          <th scope="row">key:generate</th>
+          <td>a <code>base64:</code> key is written into <code>.env</code> when missing, and stays stable across rebuilds — the worker encrypts cookies with it.</td>
+        </tr>
+        <tr>
+          <th scope="row">wrangler.jsonc</th>
+          <td>scaffolded when absent (worker name from the app-directory slug, a placeholder D1 id); <code>init</code> writes a fuller config when you want one.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="first-deploy">The first deploy</h2>
+  <p>
+    <code>deploy</code> asks only what it cannot decide — mode, worker name, database — and every
+    prompt has a default you can accept with Enter. Preview it first: <code>--plan</code> uses the
+    same resolver and the same safety decisions, but writes nothing and makes no Cloudflare call
+    unless you add <code>--check</code>.
+  </p>
+  <p>
+    A failed build touches nothing on Cloudflare. After a successful run the URL, the worker name
+    and the D1 id are recorded in <code>lw-state.json</code> inside the app, so the second deploy
+    is short. <a href="/docs/deploy/">The deploy guide</a> covers the schema guard, the account
+    guard and the flags.
+  </p>
+
+  <h2 id="next">Where to go next</h2>
+  <ul>
+    <li><a href="/docs/cli/">CLI reference</a> — every command, flag and exit code.</li>
+    <li><a href="/docs/routes/">Routes &amp; ports</a> — what <code>--strict</code> enforces and how a port replaces a route.</li>
+    <li><a href="/docs/limits/">Limits</a> — what does not run at the edge, and the escape hatch.</li>
+    <li><a href="/docs/compatibility/">Compatibility</a> — all 105 Laravel documentation pages, with a verdict.</li>
+    <li><a href="/audit/">The audit</a> — the construct census behind the coverage claims.</li>
+  </ul>
+</Docs>

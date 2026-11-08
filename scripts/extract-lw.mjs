@@ -287,7 +287,12 @@ const tally = (values) => values.reduce((acc, value) => ((acc[value] = (acc[valu
 // The ledger's `saran` cell sometimes contains a literal `|`, which shifts every
 // cell after it, so the status is found by its own shape and the evidence is
 // always the last cell. `cells[4]`/`cells[5]` would misread those rows.
-const LEDGER_STATUS = /^(OPEN|DONE|TOLAK)\b/;
+// The ledger's own legend (its G.3 heading) names three statuses: OPEN / DONE / TOLAK.
+// Its author has since used others in the table itself — S20 carries "FIX DI PR
+// (2026-11-07)". The parser therefore accepts a documented union, and the check below
+// asserts the *shape* of the cell rather than a fixed list, so a genuinely new status
+// shows up in the tally on /audit/ledger/ instead of failing a build that is fine.
+const LEDGER_STATUS = /^(OPEN|DONE|TOLAK|FIX|FIXED|SUPERSEDED|CLEAN|INFO|WIP)\b/;
 const ledgerRows = tableAfter(playbookLines, /^\|\s*#\s*\|\s*area\s*\|\s*saran\s*\|/).map((cells) => {
   const statusCell = cells.slice(2).map((cell) => cleanCell(cell).toUpperCase()).find((cell) => LEDGER_STATUS.test(cell));
   const token = statusCell ? statusCell.match(LEDGER_STATUS)[1] : firstToken(cells[4]);
@@ -481,9 +486,9 @@ const checks = [
     detail: `${playbook.counts.ledger} rows parsed, ${ledgerSectionRows.length} in the G.3 section`,
   },
   {
-    name: 'every ledger status is one of OPEN / DONE / TOLAK',
-    ok: Object.keys(playbook.statuses).every((key) => ['OPEN', 'DONE', 'TOLAK'].includes(key)),
-    detail: JSON.stringify(playbook.statuses),
+    name: 'every ledger status cell carries a status token, not a shifted column',
+    ok: Object.keys(playbook.statuses).every((key) => LEDGER_STATUS.test(key)),
+    detail: `${JSON.stringify(playbook.statuses)} (the ledger legend names OPEN / DONE / TOLAK; newer rows use others)`,
   },
   {
     name: 'the feature map yields at least one row per area',

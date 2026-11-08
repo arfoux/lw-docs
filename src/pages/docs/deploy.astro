@@ -1,0 +1,140 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import Term from '../../components/Term.astro';
+import { site } from '../../data/site.js';
+
+const preview = `npx laravel-workers deploy --plan --mode 3 --d1-auto
+npx laravel-workers deploy --plan --mode 3 --d1-auto --check   # + read-only account/D1 checks
+
+# exit 0  the plan is actionable
+# exit 2  a real run would stop (bad flags, state, missing D1 id, schema drift under --yes)
+# exit 1  --check could not complete its read-only lookup`;
+
+const ci = `npx laravel-workers deploy --name my-worker --mode 3 --d1-auto   # full deploy, no prompts
+npx laravel-workers deploy --mode 3 --d1-id <uuid> --yes        # same D1, automated`;
+
+const state = `{
+  "schemaVersion": 1,
+  "worker": "my-laravel-app",
+  "workerUrl": "https://my-laravel-app.example.workers.dev",
+  "databaseId": "…",
+  "accountId": "…",
+  "schemaHash": "…",
+  "deployedAt": "2026-10-18T09:12:04.331Z"
+}`;
+---
+
+<Docs
+  title="Deploy"
+  description="The guided deploy path: preview with --plan, pick a mode, provision D1, and the guards that refuse to guess."
+  slug="deploy"
+  lead="deploy runs build → (D1) → (deploy) and asks only what it cannot decide. Every prompt has a default; every cloud action is preceded by a check."
+  source={`README.md §deploy — repository ${site.source}`}
+>
+  <h2 id="plan">Preview first — --plan</h2>
+  <p>
+    <code>--plan</code> uses the same resolver and the same safety decisions as a real run, but it
+    is zero-mutation and offline by default: no build, no <code>dist/</code> write, no
+    <code>wrangler.jsonc</code> or <code>lw-state.json</code> edit, no D1 create or apply, no
+    deploy, and no prompts. It prints the worker name, the account a real run would target, the D1
+    action and identity, the schema action, the files a real run would change, and the cloud
+    operations it would perform.
+  </p>
+  <Code file="shell" code={preview} />
+  <p class="small muted">
+    The schema line describes the <em>existing</em> <code>dist/schema.sql</code>; because
+    <code>--plan</code> does not build, a missing file is called out and an existing one is marked
+    <em>not checked</em> against the current source. Run a real build first when the preview must
+    reflect a source change.
+  </p>
+
+  <h2 id="modes">Three modes</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">mode</th><th scope="col">what it does</th><th scope="col">touches Cloudflare?</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="mono">1</th><td>compile only — identical to <code>build</code></td><td>no</td></tr>
+        <tr><th scope="row" class="mono">2</th><td>build, then create or reuse a D1 and apply the schema when the database is empty</td><td>D1 only</td></tr>
+        <tr><th scope="row" class="mono">3</th><td>mode 2, then <code>wrangler deploy</code>; the URL and ids are recorded in <code>lw-state.json</code></td><td>D1 + Worker</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <MiniFig name="deploy-modes" />
+
+  <h2 id="prompts">The prompts</h2>
+  <Term
+    title="deploy"
+    lines={[
+      { t: '$ npx laravel-workers deploy', tone: 'p' },
+      { t: 'What should I do?', tone: 'dim' },
+      { t: '  [1] build only   [2] build + database   [3] build + database + deploy', tone: 'dim' },
+      { t: 'Choice [1] ▸ 3', tone: 'dim' },
+      { t: 'Worker name [my-laravel-app] ▸', tone: 'dim' },
+      { t: 'Database:  [A] auto   [B] list existing   [C] paste database_id', tone: 'dim' },
+      { t: 'Choice [A] ▸ A', tone: 'dim' },
+      { t: '→ built dist/ · READINESS: RUNS ON THE EDGE', tone: 'ok' },
+      { t: '→ D1 "my-laravel-app-db" ready', tone: 'dim' },
+      { t: '→ deployed · https://my-laravel-app.example.workers.dev', tone: 'ok' },
+    ]}
+  />
+  <p>
+    The worker name comes from <code>wrangler.jsonc</code> when present, then from
+    <code>lw-state.json</code>, then from the app-directory slug. The build runs with
+    <code>--strict</code>, and only after it exits 0 does anything on Cloudflare happen — a failed
+    build cannot leave an orphan D1 or a half-deploy.
+  </p>
+
+  <h2 id="schema">The schema guard</h2>
+  <p>
+    <code>dist/schema.sql</code> is generated <code>CREATE TABLE</code> DDL, not an idempotent
+    migration. Applying it to a database that already has those tables can fail with
+    <em>table already exists</em> — so <code>deploy</code> refuses to guess.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">D1 state</th><th scope="col">what happens</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">0 tables</th><td>schema applied automatically</td></tr>
+        <tr><th scope="row">tables, no recorded hash</th><td>interactive: asks before applying; with <code>--yes</code>: stops (exit 2)</td></tr>
+        <tr><th scope="row">tables, hash matches</th><td>skipped as already applied — no prompt</td></tr>
+        <tr><th scope="row">mutating migration</th><td>the build detects migrations that <code>ALTER</code> an existing table and lists them as an <strong>ADVISORY</strong> in the readiness footer — with the exact <code>npx wrangler d1 execute DB --command "ALTER ..."</code> needed</td></tr>
+        <tr><th scope="row">tables, hash changed</th><td>stops on drift. Use <code>--skip-schema</code> skip the schema entirely, then apply any <code>ALTER</code> statements the build surfaced in its <strong>ADVISORY</strong> block.</td></tr>
+        <tr><th scope="row">table count unreadable</th><td>stops instead of assuming the database is empty</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="account">The account guard</h2>
+  <p>
+    <code>lw-state.json</code> records the Cloudflare account id a deployment used. Before any D1
+    or deploy call, modes 2 and 3 resolve the account Wrangler will actually use — the
+    <code>account_id</code> pin first, then <code>CLOUDFLARE_ACCOUNT_ID</code> (or
+    <code>CF_ACCOUNT_ID</code>), then the sole account <code>wrangler whoami</code> reports — and
+    compare it with the recorded id. A mismatch refuses the run before anything is touched.
+  </p>
+  <ul>
+    <li>The <strong>id</strong> is the identity: a renamed account, or the same account through another email alias, does not switch; a different id always stops.</li>
+    <li>Switching is explicit: <code>--allow-account-change</code>, or <code>y</code> at an interactive prompt. <code>--yes</code> and non-interactive runs never confirm.</li>
+    <li>A switch clears the stale URL and deploy time, and refuses to reuse a recorded D1 the new account does not own.</li>
+    <li>Several accounts logged in with nothing pinning one stops as well — accounts are never guessed.</li>
+  </ul>
+
+  <h2 id="state">What is recorded</h2>
+  <Code file="lw-state.json" code={state} />
+  <p class="small muted">
+    Add <code>lw-state.json</code> to <code>.gitignore</code> unless you want the worker URL and D1
+    id in source control. A damaged, unreadable or future-version file stops
+    <code>deploy</code> before any prompt; <code>status</code> and <code>doctor</code> report it and
+    exit 2 rather than pretending the app has no deployment.
+  </p>
+
+  <h2 id="non-interactive">Non-interactive (CI)</h2>
+  <Code file="shell" code={ci} />
+  <p>
+    See <a href="/docs/ci/">CI &amp; verdict</a> for the workflow that wraps this, and
+    <a href="/docs/cli/">CLI reference</a> for every flag and exit code.
+  </p>
+</Docs>

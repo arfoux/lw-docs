@@ -1,8 +1,8 @@
 ---
-import Base from '../layouts/Base.astro';
-import Census from '../components/Census.astro';
-import Stat from '../components/Stat.astro';
-import { number, headline, docsPages, features, playbook, cpuFigures } from '../lib/report.js';
+import Base from '../../layouts/Base.astro';
+import Census from '../../components/Census.astro';
+import Stat from '../../components/Stat.astro';
+import { number, headline, docsPages, features, playbook, cpuFigures } from '../../lib/report.js';
 
 const order = ['fits', 'soft', 'hard', 'not-applicable'];
 // The census palette has three verdicts; the coverage index has four classes.
@@ -19,8 +19,9 @@ const grouped = order.map((klass) => ({ klass, rows: docsPages.filter((row) => r
 ---
 
 <Base
-  title="Coverage, in the laravel-workers report"
+  title="Coverage — laravel-workers audit"
   description={`The ${number(headline.docs.pages)} Laravel documentation pages with the verdict the project gives each one, plus what was measured against the Free-plan CPU budget.`}
+  provenance
 >
   <section class="section shell">
     <div class="section-head">
@@ -169,7 +170,7 @@ const grouped = order.map((klass) => ({ klass, rows: docsPages.filter((row) => r
         <h2>Where each figure comes from</h2>
       </div>
       <p>
-        Nothing on this site is typed by hand: <code>scripts/extract-lw.mjs</code> reads the
+        Nothing in this audit is typed by hand: <code>scripts/extract-lw.mjs</code> reads the
         repository and <code>scripts/verify-lw.mjs</code> fails when a figure drifts from the file it
         was read out of.
       </p>

@@ -1,17 +1,27 @@
 ---
 import Base from '../layouts/Base.astro';
+import Glyph from '../components/Glyph.astro';
 ---
 
 <Base
-  title="Not found in the laravel-workers report"
-  description="No such page in this report."
+  title="Not found — laravel-workers"
+  description="No such page. The documentation, the compatibility matrix and the audit are all one click from here."
 >
-  <section class="section shell">
-    <p class="eyebrow">404</p>
-    <h1>No such page</h1>
-    <p class="lede">
-      The report has six sections, and everything in it is reachable from the navigation above.
-    </p>
-    <p><a class="button button--primary" href="/">Back to the verdict</a></p>
+  <section class="sec">
+    <div class="shell">
+      <Glyph name="route" size={30} class="glyph--accent" />
+      <p class="eyebrow">404</p>
+      <h1 style="font-size: clamp(2rem, 1.5rem + 2.4vw, 3.4rem); line-height: 1.04; letter-spacing: -0.02em; margin: 0">
+        No such page.
+      </h1>
+      <p class="lede">
+        The site has two halves: the product documentation, and the audit behind its claims.
+      </p>
+      <div class="lhero__actions" style="justify-content: flex-start">
+        <a class="button button--primary" href="/docs/">Read the docs</a>
+        <a class="button" href="/audit/">The audit</a>
+        <a class="button" href="/">Home</a>
+      </div>
+    </div>
   </section>
 </Base>

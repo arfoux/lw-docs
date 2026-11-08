@@ -1,6 +1,7 @@
 ---
-import Base from '../layouts/Base.astro';
-import { number, report, shortSha, fetchedOn } from '../lib/report.js';
+import Base from '../../layouts/Base.astro';
+import { number, report, shortSha, fetchedOn } from '../../lib/report.js';
+import MiniFig from '../../components/MiniFig.astro';
 
 const checks = report.checks;
 const passed = checks.filter((check) => check.ok).length;
@@ -11,7 +12,7 @@ const pipeline = [
   {
     step: '1 · extract',
     run: 'node scripts/extract-lw.mjs',
-    what: 'Reads the audited repository in place and writes src/data/report.json. Every figure on this site is a field of that file: nothing is typed by hand anywhere in src/.',
+    what: 'Reads the audited repository in place and writes src/data/report.json. Every figure in this audit is a field of that file: nothing is typed by hand anywhere in src/.',
   },
   {
     step: '2 · cross-check',
@@ -57,17 +58,18 @@ const notVerified = [
 ---
 
 <Base
-  title="Method, in the laravel-workers report"
-  description="How every number on this site is produced, what was measured, and what could not be verified."
+  title="Method — laravel-workers audit"
+  description="How every number in this audit is produced, what was measured, and what could not be verified."
+  provenance
 >
   <section class="section shell">
     <div class="section-head">
       <div>
         <p class="eyebrow">method</p>
-        <h1>A report with no hand-typed numbers</h1>
+        <h1>An audit with no hand-typed numbers</h1>
       </div>
       <p>
-        The claim this site makes is narrow and checkable: for each number shown, there is a file in
+        The claim this audit makes is narrow and checkable: for each number shown, there is a file in
         the audited repository it was read out of, and a check that fails if the two disagree.
       </p>
     </div>
@@ -83,6 +85,14 @@ const notVerified = [
         </li>
       ))}
     </ul>
+  </section>
+
+  <section class="section shell">
+    <div class="section-head">
+      <div>
+        <MiniFig name="phase-chain" />
+      </div>
+    </div>
   </section>
 
   <section class="section shell">
@@ -157,7 +167,7 @@ const notVerified = [
     <div class="section-head">
       <div>
         <p class="eyebrow">limits</p>
-        <h2>What this report does not claim</h2>
+        <h2>What this audit does not claim</h2>
       </div>
       <p>The honest half of the method: things that are outside what a static extraction can settle.</p>
     </div>

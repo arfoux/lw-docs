@@ -1,47 +1,47 @@
 {
- "generatedAt": "2026-11-06T00:08:59.487Z",
+ "generatedAt": "2026-11-08T14:14:20.584Z",
  "generator": "scripts/extract-lw.mjs",
  "auditedRepo": {
   "name": "arfoux/laravel-workers",
   "path": "../laravel-workers",
-  "head": "1b5a50ac8e57d9b9d56e8403f4248d1d2a02e3b8",
+  "head": "d881989c7b6ec2629290741f69d2cbcf7149821c",
   "dirtyFiles": 0,
-  "version": "0.4.9",
+  "version": "0.4.11",
   "files": [
    {
     "path": "README.md",
-    "sha256": "a6f30b58404b6401",
-    "bytes": 50203,
+    "sha256": "023522a7bd71c652",
+    "bytes": 50990,
     "tracked": true
    },
    {
     "path": "MAP.md",
-    "sha256": "6f731b2cdc915d86",
-    "bytes": 123235,
+    "sha256": "06e1e92bac03192a",
+    "bytes": 123425,
     "tracked": true
    },
    {
     "path": "COMPILED.md",
-    "sha256": "152585d71c8005eb",
-    "bytes": 114029,
+    "sha256": "0d0e05a55d07932f",
+    "bytes": 119990,
     "tracked": true
    },
    {
     "path": "tools/constructs.json",
-    "sha256": "7469e3de871211c8",
-    "bytes": 68240,
+    "sha256": "4ed57e5521b18145",
+    "bytes": 69184,
     "tracked": true
    },
    {
     "path": "package.json",
-    "sha256": "0d4ccbf7cc8e0d9e",
-    "bytes": 5792,
+    "sha256": "6af18f7d0d3c5244",
+    "bytes": 5981,
     "tracked": true
    },
    {
     "path": "notes/PLAYBOOK.local.md",
-    "sha256": "641e5fdb72bf5972",
-    "bytes": 58786,
+    "sha256": "59631cce1b2d6f9e",
+    "bytes": 147100,
     "tracked": false
    },
    {
@@ -655,7 +655,7 @@
    "reason": null,
    "batch": "M40",
    "status": "done",
-   "note": "PHP compares what finfo sniffs; the edge reads the image HEADER instead (kernel/image.mjs) and answers with the same guessExtension() map Symfony uses - so mimes:jpg,png,webp (and mimetypes:image/jpeg,...) answer Laravel's verdict, including the guessExtension() sharp edge (mimes:jpeg rejects a real JPEG in PHP too). A parameter naming any other content (pdf, svg, docx, bmp) still fails loud (LW002): that verdict would be a guess."
+   "note": "PHP compares what finfo sniffs; the edge reads the image HEADER instead (kernel/image.mjs) and answers with the same guessExtension() map Symfony uses - so mimes:jpg,png,webp (and mimetypes:image/jpeg,...) answer Laravel's verdict, including the jpg/jpeg merge: guessExtension() answers jpg for image/jpeg and the vendor adds BOTH names, so mimes:jpeg ACCEPTS a real JPEG (ValidatesAttributes::validateMimes() :1764-1766). A parameter naming any other content (pdf, svg, docx, bmp) still fails loud (LW002): that verdict would be a guess."
   },
   {
    "id": "file_rule_mimes_unanswerable",
@@ -765,7 +765,7 @@
    "reason": null,
    "batch": "M62f",
    "status": "done",
-   "note": "All three hooks run in the compiled lifecycle, in Laravel's order: validationData() is the data source, after() registers its RETURN VALUE as a validator callback, and passedValidation() runs after the rules pass. Proven by the shadow (POST /hooked-request-demo 422/422 for the after() refusal and 200/200 carrying the passedValidation marker)."
+   "note": "All three hooks run in the compiled lifecycle, in Laravel's order: validationData() is the data source, after() registers its RETURN VALUE as a validator callback, and passedValidation() runs after the rules pass. Proven by the shadow (POST /hooked-request-demo 422/422 for the after() refusal and 200/200 carrying the passedValidation marker). The hook parameter needs its TYPE HINT (Validator $validator, and the same on the callbacks the hook registers through $validator->after(...)): an untyped parameter is LW002 (the class compiler cannot infer the validator), and the route that injects the class is then STOPPED with that reason instead of shipping a handler that answers 500 (audit #891). after() returns a single callable in the proven shape."
   },
   {
    "id": "form_request_with_validator",
@@ -776,7 +776,7 @@
    "reason": null,
    "batch": "M62f",
    "status": "done",
-   "note": "Laravel calls the hook with the validator right after it is built (Foundation/Http/FormRequest.php:110), so the app's custom messages and its after() callbacks run. The compiled class carries the hook and the lifecycle calls it with the kernel's validator, in Laravel's order. Proven by the shadow (POST /hooked-request-demo 422/422 byte-identical when withValidator() refuses the flag) and by the compiled handler's hooks: [...] list."
+   "note": "Laravel calls the hook with the validator right after it is built (Foundation/Http/FormRequest.php:110), so the app's custom messages and its after() callbacks run. The compiled class carries the hook and the lifecycle calls it with the kernel's validator, in Laravel's order. Proven by the shadow (POST /hooked-request-demo 422/422 byte-identical when withValidator() refuses the flag) and by the compiled handler's hooks: [...] list. The hook parameter needs its TYPE HINT (Validator $validator, and the same on the callbacks the hook registers through $validator->after(...)): an untyped parameter is LW002 (the class compiler cannot infer the validator), and the route that injects the class is then STOPPED with that reason instead of shipping a handler that answers 500 (audit #891). after() returns a single callable in the proven shape."
   },
   {
    "id": "listener_service",
@@ -2591,19 +2591,21 @@
   "note": "working-tree note, not in the repository: only its shape is republished here",
   "counts": {
    "justified": 7,
-   "ledger": 19,
-   "corrections": 7,
+   "ledger": 20,
+   "corrections": 12,
    "fixes": 26
   },
   "statuses": {
    "OPEN": 14,
-   "DONE": 5
+   "DONE": 5,
+   "FIX": 1
   },
   "qualified": {
    "OPEN (KOREKSI)": 1,
    "OPEN (KLARIFIKASI)": 1,
    "DONE (2026-11-03)": 4,
-   "DONE (2026-11-04), COMMIT 030A07B": 1
+   "DONE (2026-11-04), COMMIT 030A07B": 1,
+   "FIX DI PR (2026-11-07)": 1
   },
   "areas": {
    "tes": 2,
@@ -2621,9 +2623,10 @@
    "proses/tes": 1,
    "fitur + bug P2": 1,
    "bug P1": 1,
-   "bug P3": 1
+   "bug P3": 1,
+   "bug P1 (dari app konsumen)": 1
   },
-  "citing": 8,
+  "citing": 9,
   "rows": [
    {
     "id": "S1",
@@ -2719,16 +2722,22 @@
     "id": "S19",
     "area": "bug P3",
     "status": "OPEN"
+   },
+   {
+    "id": "S20",
+    "area": "bug P1 (dari app konsumen)",
+    "status": "FIX"
    }
   ],
   "corrections": {
-   "total": 7,
+   "total": 12,
    "rulings": {
     "SALAH": 3,
-    "TERTOLAK": 1,
+    "TERTOLAK": 3,
     "TERTUTUP": 1,
-    "KOREKSI": 1,
-    "SEBAGIAN": 1
+    "KOREKSI": 3,
+    "SEBAGIAN": 1,
+    "STATUS": 1
    }
   },
   "severity": {
@@ -2794,12 +2803,12 @@
   {
    "name": "the ledger table is read whole (a blank line inside it does not truncate)",
    "ok": true,
-   "detail": "19 rows parsed, 19 in the G.3 section"
+   "detail": "20 rows parsed, 20 in the G.3 section"
   },
   {
-   "name": "every ledger status is one of OPEN / DONE / TOLAK",
+   "name": "every ledger status cell carries a status token, not a shifted column",
    "ok": true,
-   "detail": "{\"OPEN\":14,\"DONE\":5}"
+   "detail": "{\"OPEN\":14,\"DONE\":5,\"FIX\":1} (the ledger legend names OPEN / DONE / TOLAK; newer rows use others)"
   },
   {
    "name": "the feature map yields at least one row per area",

@@ -1,6 +1,6 @@
 ---
-import Base from '../layouts/Base.astro';
-import { report, constructs, docsPages, features, cpuFigures } from '../lib/report.js';
+import Base from '../../layouts/Base.astro';
+import { report, constructs, docsPages, features, cpuFigures } from '../../lib/report.js';
 
 // The counters table is built by walking report.json rather than by listing what to show,
 // so a figure added to the payload appears here without anyone remembering to add a row.
@@ -22,9 +22,9 @@ const counters = [
 ---
 
 <Base
-  title="Full report, every extracted figure"
+  title="Every extracted figure — laravel-workers audit"
   description="Every extracted figure and every extracted row on a single page, for reading and for printing."
-  showReportLink={false}
+  provenance
 >
   <section class="section shell">
     <div class="section-head">

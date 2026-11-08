@@ -1,0 +1,105 @@
+---
+// The one chart on the site: measured CPU against the Free plan's 10 ms budget.
+// Log scale, because the interesting numbers span four orders of magnitude — and a
+// linear axis would draw the compiled handler as a zero-width line, which is a lie of
+// a different kind. Every number is the source's own; the audit re-states each one.
+const W = 920;
+const PAD_L = 96;
+const PAD_R = 28;
+const MIN = 1;
+const MAX = 2600;
+const x = (ms) => PAD_L + (Math.log10(ms) - Math.log10(MIN)) / (Math.log10(MAX) - Math.log10(MIN)) * (W - PAD_L - PAD_R);
+const ticks = [1, 10, 100, 1000, 2000];
+
+const rows = [
+  {
+    y: 96,
+    label: 'php-in-worker',
+    sub: 'cold boot',
+    from: 1008,
+    to: 2018,
+    dots: [],
+    value: '1,008–2,018 ms',
+    tone: 'var(--blocked)',
+    tag: 'over budget',
+    side: 'left',
+  },
+  {
+    y: 172,
+    label: 'kernel hot paths',
+    sub: 'page-like probe',
+    from: 5,
+    to: 62,
+    dots: [5, 41],
+    value: 'p50 5 · p95 41 · max 62',
+    tone: 'var(--documented)',
+    tag: 'tail over',
+  },
+  {
+    y: 248,
+    label: 'port handler',
+    sub: 'native JS',
+    from: 1,
+    to: 6,
+    dots: [],
+    value: '1–6 ms',
+    tone: 'var(--compiles)',
+    tag: 'fits',
+  },
+];
+const budgetX = x(10);
+---
+
+<figure class="budgetfig">
+  <svg viewBox={`0 0 ${W} 300`} role="img" aria-labelledby="budget-title budget-desc" class="budgetfig__svg">
+    <title id="budget-title">Measured CPU per request against the Free plan's 10 ms budget</title>
+    <desc id="budget-desc">
+      On a logarithmic axis from 1 to 2,600 milliseconds: a PHP-in-Worker cold boot measured
+      1,008 to 2,018 milliseconds; the kernel's page-like load measured a p50 of 5, a p95 of 41 and a
+      max of 62 milliseconds; a hand-written port handler measured 1 to 6 milliseconds. The dashed
+      line is the Free plan's 10 millisecond budget.
+    </desc>
+
+    <g class="bf-grid">
+      {ticks.map((ms) => (
+        <g>
+          <line x1={x(ms)} y1="62" x2={x(ms)} y2="272" />
+          <text x={x(ms)} y="292" text-anchor="middle">{ms >= 1000 ? `${ms / 1000},000` : ms}</text>
+        </g>
+      ))}
+    </g>
+
+    <line class="bf-budget" x1={budgetX} y1="56" x2={budgetX} y2="272" />
+    <text class="bf-budgetlabel" x={budgetX + 8} y="34">10 ms budget</text>
+
+    {rows.map((row) => (
+      <g class="bf-row">
+        <text class="bf-label" x={PAD_L - 16} y={row.y + 4} text-anchor="end">{row.label}</text>
+        <text class="bf-sub" x={PAD_L - 16} y={row.y + 19} text-anchor="end">{row.sub}</text>
+        <line class="bf-bar" x1={x(row.from)} y1={row.y} x2={x(row.to)} y2={row.y} style={`stroke:${row.tone}`} />
+        {row.dots.map((dot) => (
+          <circle class="bf-dot" cx={x(dot)} cy={row.y} r="3.5" style={`fill:${row.tone}`} />
+        ))}
+        <text
+          class="bf-value"
+          x={row.side === 'left' ? x(row.from) - 14 : x(row.to) + 12}
+          y={row.y + 4}
+          text-anchor={row.side === 'left' ? 'end' : 'start'}
+        >{row.value}</text>
+        <text
+          class="bf-tag"
+          x={row.side === 'left' ? x(row.from) - 14 : x(row.to) + 12}
+          y={row.y + 18}
+          text-anchor={row.side === 'left' ? 'end' : 'start'}
+          style={`fill:${row.tone}`}
+        >{row.tag}</text>
+      </g>
+    ))}
+  </svg>
+  <figcaption>
+    Log scale, 1 ms to 2,000 ms per request. A bar is the spread the probe recorded; a dot is a
+    percentile. Sources: <span class="mono">MAP.md</span> §1 (the PHP-in-Worker probe), the
+    project's <span class="mono">npm run gate:cpu</span> (page-like load, read back from the
+    platform's own cpuTime and outcome) and the port-handler probe.
+  </figcaption>
+</figure>

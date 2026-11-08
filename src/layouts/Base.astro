@@ -1,16 +1,24 @@
 ---
 import '../styles/site.css';
-import { auditedRepo, fetchedOn, shortSha } from '../lib/report.js';
+import '../styles/product.css';
+import Mark from '../components/Mark.astro';
+import { site, paths } from '../data/site.js';
 
-const { title, description, showReportLink = true } = Astro.props;
-const current = Astro.url.pathname;
-const links = [
-  { href: '/constructs/', label: 'census' },
-  { href: '/coverage/', label: 'coverage' },
-  { href: '/gaps/', label: 'gaps' },
-  { href: '/ledger/', label: 'ledger' },
-  { href: '/method/', label: 'method' },
-  ...(showReportLink ? [{ href: '/report/', label: 'report' }] : []),
+const { title, description, provenance = false } = Astro.props;
+const current = Astro.url.pathname.replace(/index\.html$/, '');
+const productNav = [
+  { href: paths.docs, label: 'docs', match: '/docs' },
+  { href: paths.compatibility, label: 'compatibility', match: '/docs/compatibility' },
+  { href: paths.audit, label: 'audit', match: '/audit' },
+];
+// Only one nav item may be `aria-current`: compatibility is nested under /docs/,
+// so the longest href that matches wins instead of both lighting up.
+const activeHref = productNav
+  .filter((link) => current === link.href || current.startsWith(link.href))
+  .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+const external = [
+  { href: site.repo, label: 'GitHub', mark: 'github' },
+  { href: site.npm, label: 'npm', mark: 'npm' },
 ];
 ---
 
@@ -22,9 +30,15 @@ const links = [
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    {current !== '/404/' && <link rel="canonical" href={Astro.site ? new URL(current, Astro.site).href : current} />}
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="640" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0e1412" />
     <script is:inline>
       // Resolve the theme before first paint so no theme flashes.
       const saved = localStorage.getItem('lw-theme');
@@ -40,12 +54,22 @@ const links = [
       <div class="shell topbar__inner">
         <a class="brand" href="/">
           <img src="/logo.svg" width="22" height="22" alt="" aria-hidden="true" />
-          <span>laravel-workers report</span>
+          <span>{site.name}</span>
+          <span class="brand__version mono">v{site.version}</span>
         </a>
 
-        <nav class="nav" aria-label="Sections">
-          {links.map((link) => (
-            <a href={link.href} aria-current={current === link.href ? 'page' : undefined}>{link.label}</a>
+        <nav class="nav" aria-label="Documentation">
+          {productNav.map((link) => (
+            <a href={link.href} aria-current={activeHref === link.href ? 'page' : undefined}>{link.label}</a>
+          ))}
+        </nav>
+
+        <nav class="nav nav--external" aria-label="The package">
+          {external.map((link) => (
+            <a href={link.href} rel="external">
+              <Mark name={link.mark} size={15} />
+              {link.label}
+            </a>
           ))}
         </nav>
 
@@ -62,33 +86,57 @@ const links = [
     <footer class="footer">
       <div class="shell footer__grid">
         <div>
-          <p>
-            Every number on this page is produced by <code>scripts/extract-lw.mjs</code> from
-            {' '}<a href={`https://github.com/${auditedRepo.name}`}>{auditedRepo.name}</a>{' '}
-            at <code class="mono">{shortSha(auditedRepo.head)}</code> (v{auditedRepo.version}),
-            extracted {fetchedOn}. Nothing here is typed by hand.
+          <p class="footer__claim">
+            <img src="/logo.svg" width="18" height="18" alt="" aria-hidden="true" />
+            <strong>{site.name}</strong> — {site.tagline} Build time does the boot; the edge runs plain JavaScript.
           </p>
           <p class="small">
-            Status colours and the mark come from the project's own
-            {' '}<a href={`https://github.com/${auditedRepo.name}/blob/main/docs/BRAND.md`}>docs/BRAND.md</a>,
-            so this report cannot drift from the product it describes.
+            {site.license} licensed. Laravel, Cloudflare and Workers are trademarks of their owners.
+            {' '}The mark and palette are the project's own, from
+            {' '}<a href={`${site.repo}/blob/main/docs/BRAND.md`}>docs/BRAND.md</a>.
           </p>
         </div>
         <div>
-          <h2>this site</h2>
+          <h2>docs</h2>
           <ul>
-            {links.map((link) => <li><a href={link.href}>{link.label}</a></li>)}
+            <li><a href="/docs/">getting started</a></li>
+            <li><a href="/docs/cli/">cli reference</a></li>
+            <li><a href="/docs/deploy/">deploy</a></li>
+            <li><a href="/docs/compatibility/">compatibility</a></li>
+            <li><a href="/docs/limits/">limits</a></li>
           </ul>
         </div>
         <div>
-          <h2>the product</h2>
+          <h2>package</h2>
           <ul>
-            <li><a href={`https://github.com/${auditedRepo.name}`}>repository</a></li>
-            <li><a href={`https://www.npmjs.com/package/${auditedRepo.name}`}>npm</a></li>
-            <li><a href={`https://github.com/${auditedRepo.name}/blob/main/docs/READINESS.md`}>readiness</a></li>
+            <li><a href={site.npm} rel="external"><Mark name="npm" size={15} /> npm</a></li>
+            <li><a href={site.repo} rel="external"><Mark name="github" size={15} /> github</a></li>
+            <li><a href={site.changelog} rel="external"><Mark name="markdown" size={15} /> changelog</a></li>
+            <li><a href={site.issues} rel="external"><Mark name="actions" size={15} /> issues</a></li>
+            <li><a href={site.licenseUrl} rel="external"><Mark name="key" size={15} /> license</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>audit</h2>
+          <ul>
+            <li><a href="/audit/">the audit</a></li>
+            <li><a href="/audit/constructs/">census</a></li>
+            <li><a href="/audit/coverage/">docs coverage</a></li>
+            <li><a href="/audit/gaps/">refusals</a></li>
+            <li><a href="/audit/method/">method</a></li>
           </ul>
         </div>
       </div>
+      {provenance && (
+        <div class="shell">
+          <p class="small muted footer__provenance">
+            The audit pages are pinned to <a href={`https://github.com/${site.audited.repo}`}>{site.audited.repo}</a>
+            {' '}at <code class="mono">{site.audited.head}</code> (v{site.audited.version}); every figure on them is
+            extracted from that commit by <code>scripts/extract-lw.mjs</code>. The docs and the rest of this site are
+            read from <code class="mono">{site.source}</code> (v{site.version}).
+          </p>
+        </div>
+      )}
     </footer>
 
     <script is:inline>

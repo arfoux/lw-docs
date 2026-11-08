@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# The site is static and has no private routes; nothing to disallow.

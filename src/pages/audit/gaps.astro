@@ -1,7 +1,8 @@
 ---
-import Base from '../layouts/Base.astro';
-import Stat from '../components/Stat.astro';
-import { number, headline, failsLoud, constructs, docsPages } from '../lib/report.js';
+import Base from '../../layouts/Base.astro';
+import Stat from '../../components/Stat.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { number, headline, failsLoud, constructs, docsPages } from '../../lib/report.js';
 
 const byBatch = constructs
   .filter((row) => row.verdict === 'fails-loud')
@@ -16,8 +17,9 @@ const trades = docsPages.filter((row) => row.klass === 'soft');
 ---
 
 <Base
-  title="Gaps, in the laravel-workers report"
+  title="Gaps — laravel-workers audit"
   description={`The ${number(headline.constructs.failsLoud)} constructs that refuse to compile, the ${number(walls.length)} platform walls, and the escape hatch for each.`}
+  provenance
 >
   <section class="section shell">
     <div class="section-head">
@@ -71,6 +73,8 @@ const trades = docsPages.filter((row) => row.klass === 'soft');
         not the way a release-note summary would.
       </p>
     </div>
+
+    <MiniFig name="severity-stack" />
 
     <div class="table-wrap">
       <table>

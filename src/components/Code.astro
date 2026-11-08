@@ -1,0 +1,11 @@
+---
+const { file, lang, code } = Astro.props;
+---
+
+<div class="code">
+  <div class="code__head">
+    <span>{file ?? 'shell'}</span>
+    <span>{lang ?? (file?.endsWith('.json') ? 'json' : file?.endsWith('.yml') ? 'yaml' : file?.endsWith('.js') || file?.endsWith('.mjs') ? 'javascript' : 'shell')}</span>
+  </div>
+  <pre><code>{code}</code></pre>
+</div>

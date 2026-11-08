@@ -1,0 +1,127 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const query = `// compiled from PHP, at build time; executed against D1 at request time
+const posts = await Post.where('published', 1)
+  .orderBy('created_at', 'desc')
+  .limit(20)
+  .get(db);`;
+---
+
+<Docs
+  title="Data & D1"
+  description="Schema at build time, the query builder, Eloquent, cache, storage and uploads on Cloudflare D1."
+  slug="data"
+  lead="Migrations run at build time against an in-memory SQLite; the request-time layer is a Workers-native query builder and ORM subset over D1."
+  source={`README.md §Compiles today, §Zero-touch; COMPILED.md; MAP.md §5.D — repository ${site.source}`}
+>
+  <h2 id="schema">Schema, without a database</h2>
+  <p>
+    <code>tools/schema-compile.php</code> boots your app, runs the migrations against an in-memory
+    SQLite, and dumps the resulting DDL through pragma. Your <code>database/</code> directory is not
+    touched, no MySQL or Postgres server is involved, and the output is
+    <code>dist/schema.sql</code> + <code>dist/schema.json</code> — the same DDL for a MySQL,
+    Postgres or SQLite source app.
+  </p>
+  <p class="small muted">
+    On a fresh checkout with no database file, the build seeds a throwaway SQLite under
+    <code>.cache/</code> so Laravel can boot for prerendering. It is empty on purpose: it is not
+    your database and not the cloud D1.
+  </p>
+
+  <MiniFig name="schema" />
+
+  <h2 id="builder">The query builder</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">surface</th><th scope="col">supported</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">filters</th><td><code>where*</code>, <code>where(fn)</code>, <code>orWhere*</code>, <code>whereIn</code>, <code>whereNull</code>, <code>whereBetween</code>, <code>whereDate/Year/Month/Day/Time</code></td></tr>
+        <tr><th scope="row">shapes</th><td><code>join</code>, <code>leftJoin</code>, <code>group</code>, <code>having</code>, <code>distinct</code>, <code>orderBy</code>, <code>limit</code>, <code>offset</code></td></tr>
+        <tr><th scope="row">aggregates</th><td><code>count</code>, <code>sum</code>, <code>avg</code>, <code>min</code>, <code>max</code>, <code>exists</code></td></tr>
+        <tr><th scope="row">writes</th><td><code>insert</code>, <code>insertGetId</code>, <code>upsert</code>, <code>update</code>, <code>updateOrInsert</code>, <code>increment</code>, <code>delete</code>, <code>truncate</code></td></tr>
+        <tr><th scope="row">batching</th><td><code>chunk</code>, <code>pluck</code>, <code>value</code>, <code>first</code>, <code>get</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Parameter binding is D1-safe: booleans become <code>1/0</code>, dates ISO strings,
+    <code>undefined</code> becomes <code>NULL</code>. The builder is exercised against a real
+    in-memory SQLite integration suite, not only against mocks.
+  </p>
+  <Code file="the compiled handler" lang="javascript" code={query} />
+
+  <h2 id="eloquent">Eloquent</h2>
+  <p>
+    A schema-driven subset of the ORM compiles: <code>find</code>/<code>findOrFail</code>,
+    <code>all</code>, <code>where*</code>, <code>orderBy*</code>, <code>limit</code> with
+    <code>first</code>/<code>get</code>/<code>count</code>/<code>pluck</code>/<code>value</code>;
+    relations <code>hasMany</code>/<code>hasOne</code>/<code>belongsTo</code> (eager and lazy, and as
+    properties); writes <code>create</code>/<code>updateOrCreate</code>/<code>firstOrCreate</code>/
+    <code>fill</code>/<code>save</code>/<code>delete</code>; <code>fillable</code>, accessors and
+    mutators; casts <code>json</code>, <code>decimal:N</code>, <code>hashed</code>;
+    <code>refresh</code>/<code>increment</code>; soft deletes.
+  </p>
+  <p class="small muted">
+    Anything outside that — a custom query scope that calls a PHP function the edge cannot run, for
+    example — fails loud with the failing construct named.
+  </p>
+
+  <h2 id="cache-storage">Cache, storage, uploads</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">need</th><th scope="col">at the edge</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row">Cache</th>
+          <td>
+            the <code>database</code> store on D1 (<code>get</code>/<code>put</code>/<code>add</code>/
+            <code>remember</code>/<code>increment</code>/<code>decrement</code>/<code>forget</code>/
+            <code>flush</code>), plus KV cache-aside. <code>Cache::tags()</code> fails loud: a
+            non-taggable store throws in Laravel too.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Storage</th>
+          <td>
+            <code>Storage::put/get/exists/delete</code> on the default disk → the D1 blob store
+            (<code>lw_blobs</code>, 1.5 MB/object, no card), or R2 when a bucket is bound. A
+            <em>named</em> disk fails loud — it would need its own bucket.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Uploads</th>
+          <td>
+            the multipart body is parsed at the edge, <code>$request-&gt;file()</code> answers a file
+            object, <code>store()</code>/<code>storeAs()</code> write to the default disk, the
+            <code>file</code> rule and the size rules in kilobytes work, and a
+            <code>mimes</code>/<code>mimetypes</code> rule compiles for the formats the edge can read
+            from the file header. <code>$file-&gt;getMimeType()</code> — the finfo answer — fails
+            loud, and so does a <code>mimes</code> rule naming a format the header read cannot
+            confirm.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Pagination</th>
+          <td>
+            <code>paginate(10)</code> returns a real <code>LengthAwarePaginator</code>;
+            <code>-&gt;links()</code> renders Laravel's <code>pagination::tailwind</code> view
+            byte-identically.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="limits">Two numbers to keep in mind</h2>
+  <p>
+    D1 Free allows <strong>100k writes a day</strong> and <strong>5M reads</strong>. The toolchain
+    is shaped around that: cookie sessions write zero rows, the throttle is applied to the routes
+    that need it rather than blanket, and eager loading exists to keep query counts down. The
+    <a href="/audit/">audit</a> records which constructs were measured and which were only
+    documented.
+  </p>
+</Docs>

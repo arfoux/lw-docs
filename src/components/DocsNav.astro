@@ -1,0 +1,18 @@
+---
+import { docs, docPath } from '../data/docs.js';
+const { slug } = Astro.props;
+const here = (page) => docPath(page.slug) === docPath(slug);
+---
+
+{docs.map((group) => (
+  <div class="docs__group">
+    <h2>{group.group}</h2>
+    <ul>
+      {group.pages.map((page) => (
+        <li>
+          <a href={docPath(page.slug)} aria-current={here(page) ? 'page' : undefined}>{page.title}</a>
+        </li>
+      ))}
+    </ul>
+  </div>
+))}

@@ -3,17 +3,18 @@
   "type": "module",
   "version": "0.1.0",
   "private": true,
-  "description": "Evidence-backed report on what a Laravel app compiles to on Cloudflare Workers",
+  "description": "The laravel-workers site: landing page, documentation, and the audit behind its claims",
   "engines": {
     "node": ">=22.23.4"
   },
   "scripts": {
     "extract": "node scripts/extract-lw.mjs",
     "verify": "node scripts/verify-lw.mjs",
+    "verify:site": "node scripts/check-site.mjs",
     "build": "astro build",
     "dev": "astro dev",
     "preview": "npm run build && wrangler dev",
-    "deploy": "npm run extract && npm run verify && astro build && wrangler deploy"
+    "deploy": "npm run extract && npm run verify && npm run build && npm run verify:site && wrangler deploy"
   },
   "dependencies": {
     "astro": "^7.4.5",

@@ -1,13 +1,14 @@
 ---
-import Base from '../layouts/Base.astro';
-import Stat from '../components/Stat.astro';
-import Census from '../components/Census.astro';
-import { number, headline, constructs } from '../lib/report.js';
+import Base from '../../layouts/Base.astro';
+import Stat from '../../components/Stat.astro';
+import Census from '../../components/Census.astro';
+import { number, headline, constructs } from '../../lib/report.js';
 ---
 
 <Base
-  title="The census, in the laravel-workers report"
+  title="The census — laravel-workers audit"
   description={`All ${number(headline.constructs.audited)} audited PHP constructs, their verdicts, and the batch each one was proven in.`}
+  provenance
 >
   <section class="section shell">
     <div class="section-head">
@@ -18,7 +19,7 @@ import { number, headline, constructs } from '../lib/report.js';
       <p>
         <code>tools/constructs.json</code> is the complete list of PHP constructs the audit covers. Each one
         lands in exactly one bucket, and the three tallies below are recomputed from that file every
-        time this site is built.
+        time this audit is built.
       </p>
     </div>
 

@@ -1,7 +1,8 @@
 ---
-import Base from '../layouts/Base.astro';
-import Stat from '../components/Stat.astro';
-import { number, playbook } from '../lib/report.js';
+import Base from '../../layouts/Base.astro';
+import Stat from '../../components/Stat.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { number, playbook } from '../../lib/report.js';
 
 const statuses = Object.entries(playbook.statuses).sort((a, b) => b[1] - a[1]);
 const areas = Object.entries(playbook.areas).sort((a, b) => b[1] - a[1]);
@@ -10,7 +11,7 @@ const qualifiedRows = Object.values(playbook.qualified ?? {}).reduce((a, b) => a
 const severity = playbook.severity;
 const total = severity ? severity.P1 + severity.P2 + severity.P3 + severity.INFO : 0;
 // The band definitions are the source's own words (`.opencode/context.md`, a
-// working-tree note). Paraphrasing them would put this report's reading of P1/P2/P3
+// working-tree note). Paraphrasing them would put this audit's reading of P1/P2/P3
 // on the page as if it were the project's, so the text is quoted instead.
 const legend = playbook.severityLegend ?? {};
 const bands = severity
@@ -24,8 +25,9 @@ const bands = severity
 ---
 
 <Base
-  title="Ledger, in the laravel-workers report"
+  title="Ledger — laravel-workers audit"
   description="The shape of the project's own audit ledger: how many suggestions it holds, how the audit's severities distribute, and how many are closed."
+  provenance
 >
   <section class="section shell">
     <div class="section-head">
@@ -107,6 +109,9 @@ const bands = severity
       <div>
         <p class="eyebrow">suggestions</p>
         <h2>{number(playbook.counts.ledger)} rows, by status and by area</h2>
+      </div>
+      <div class="section-actions">
+        <MiniFig name="status-tally" />
       </div>
       <p>
         Each row is one suggested change with its own risk note and verification recipe. The

@@ -1,0 +1,134 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { docsPages, features, headline } from '../../lib/report.js';
+import { site } from '../../data/site.js';
+
+// The verdict vocabulary is docs/READINESS.md's, not this site's: a reader who takes
+// one label to the repository must find the same words there.
+const VERDICT = {
+  fits: { label: 'runs on the edge', short: 'runs', hint: 'works as-is, inside the budget' },
+  soft: { label: 'runs with declared gaps', short: 'gaps', hint: 'works with a documented trade' },
+  hard: { label: 'needs a padanan (port)', short: 'port', hint: 'a platform wall: write the equivalent' },
+  'not-applicable': { label: 'not applicable at the edge', short: 'n/a', hint: 'local tooling or a meta page' },
+};
+const order = ['fits', 'soft', 'hard', 'not-applicable'];
+const counts = Object.fromEntries(order.map((klass) => [klass, docsPages.filter((row) => row.klass === klass).length]));
+const groups = [...new Set(features.map((row) => row.area))];
+const featureCounts = Object.fromEntries(order.map((klass) => [klass, features.filter((row) => row.klass === klass).length]));
+---
+
+<Docs
+  title="Compatibility"
+  description="Every Laravel documentation page and every construct the audit covers, with the verdict the project gives it."
+  slug="compatibility"
+  lead="Two tables, both generated from the repository: 105 Laravel documentation pages and the 49-row feature map behind them. A construct without a verdict is a gap, and gaps are build-blocking."
+  source={`docs/READINESS.md, MAP.md §5 — extracted from repository ${site.audited.repo} at ${site.audited.head} (v${site.audited.version})`}
+>
+  <h2 id="legend">Reading the verdicts</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">verdict</th><th scope="col">meaning</th></tr></thead>
+      <tbody>
+        {order.map((klass) => (
+          <tr>
+            <th scope="row">
+              <span class="dot" data-klass={klass} aria-hidden="true"></span>
+              {VERDICT[klass].label}
+            </th>
+            <td>{VERDICT[klass].hint}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">
+    For your own app the same words come from the build: <code>READINESS: RUNS ON THE EDGE</code>,
+    <code>RUNS WITH DECLARED GAPS</code> (declared gaps ship, and are named), or
+    <code>DOES NOT RUN</code> (a route has no decision). The table below is about Laravel's own
+    documentation surface, not about a particular app.
+  </p>
+
+  <MiniFig name="verdict-scale" />
+
+  <h2 id="docs">Laravel documentation, page by page</h2>
+  <div class="verdicts" style="margin-bottom: 1rem">
+    {order.map((klass) => (
+      <span class="v" data-k={klass === 'fits' ? 'runs' : klass === 'hard' ? 'no' : klass === 'soft' ? 'gaps' : 'no'}>
+        {counts[klass]} {VERDICT[klass].short}
+      </span>
+    ))}
+    <span class="v" data-k="runs">{docsPages.length} pages</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th scope="col">page</th><th scope="col">verdict</th><th scope="col">what it means for your app</th></tr>
+      </thead>
+      <tbody>
+        {docsPages.map((row) => (
+          <tr>
+            <th scope="row" class="mono">{row.page}</th>
+            <td class="cell-verdict">
+              <span class="dot" data-klass={row.klass} aria-hidden="true"></span>
+              {VERDICT[row.klass].short}
+            </td>
+            <td class="small muted">{row.note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="features">The feature map</h2>
+  <p>
+    The coverage index above is the reader-facing view of this map: {features.length} rows across{' '}
+    {groups.length} areas, each stating what Laravel does, what the edge does instead, and the trade
+    where there is one.
+  </p>
+  <div class="verdicts" style="margin-bottom: 1rem">
+    {order.map((klass) => (
+      <span class="v" data-k={klass === 'fits' ? 'runs' : klass === 'hard' ? 'no' : klass === 'soft' ? 'gaps' : 'no'}>
+        {featureCounts[klass]} {VERDICT[klass].short}
+      </span>
+    ))}
+  </div>
+  {groups.map((area) => (
+    <section>
+      <h3 id={area.replace(/[^a-z]+/gi, '-').toLowerCase()}>{area}</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Laravel</th><th scope="col">on the edge</th><th scope="col">verdict</th><th scope="col">note</th></tr>
+          </thead>
+          <tbody>
+            {features.filter((row) => row.area === area).map((row) => (
+              <tr>
+                <th scope="row" class="small">{row.laravel}</th>
+                <td class="small">{row.edge}</td>
+                <td class="cell-verdict">
+                  <span class="dot" data-klass={row.klass} aria-hidden="true"></span>
+                  {VERDICT[row.klass].short}
+                </td>
+                <td class="small muted">{row.notes}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ))}
+
+  <h2 id="constructs">The construct census</h2>
+  <p>
+    The documentation map answers “which Laravel features”. The census answers “which PHP constructs”:
+    {' '}{headline.constructs.audited} audited, {headline.constructs.compiles} compile,
+    {' '}{headline.constructs.failsLoud} fail loud and {headline.constructs.documented} are documented
+    at build level. Each row carries the batch it was proven in.
+  </p>
+  <p>
+    <a href="/audit/constructs/">The census, row by row</a> ·
+    <a href="/audit/gaps/">where the refusals cluster</a> ·
+    <a href="/audit/method/">how the audit was extracted</a>
+  </p>
+</Docs>

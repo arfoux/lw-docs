@@ -1,0 +1,114 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const commands = [
+  ['build', 'compile the app to dist/', '--strict (default in the guided path), --scaffold writes a 501 stub port per unanswered route, --no-cache skips the cache hit check'],
+  ['deploy', 'build, then (on request) D1 and the Cloudflare deploy', 'see the deploy page: --plan, --mode, --d1-auto, --d1-id, --skip-schema, --schema=apply, --name, --yes, --allow-account-change'],
+  ['init', 'scaffold registry.json + wrangler.jsonc, idempotent', 'never overwrites an existing file'],
+  ['status', 'what is recorded in lw-state.json: worker, URL, D1, account, when', 'exits 2 when the state file is damaged instead of pretending there is no deployment'],
+  ['doctor', 'preflight: php, vendor, wrangler, deploy state', '--cloud also resolves the Cloudflare account and compares it with the recorded one'],
+  ['shadow', 'proof harness: real PHP app vs the compiled worker, byte-wise', '--app <root>'],
+  ['verify', 'php tools/verify-s0.php', 'SKIP when there is no parent vendor/'],
+  ['vendor:ensure', 'provision a composer-free vendor tree', 'CI prewarm'],
+  ['php:ensure', 'resolve or provision the PHP interpreter', 'CI prewarm'],
+];
+
+const deployFlags = [
+  ['--plan', 'preview only: no build, no writes, no cloud mutation; exit 0 if actionable, 2 if a real run would stop'],
+  ['--check', 'with --plan: add read-only account verification and d1 list / table-count calls'],
+  ['--mode 1|2|3', 'build only / + database / + deploy'],
+  ['--name <worker>', 'set the worker name (modes 2/3) without a prompt'],
+  ['--d1-auto', 'create or reuse <worker>-db, capped to D1’s 63-character limit'],
+  ['--d1-id <uuid>', 'use a specific existing D1 (mutually exclusive with --d1-auto)'],
+  ['--skip-schema', 'skip the schema step entirely — use this when you handle the drift manually'],
+  ['--schema=apply', 'run CREATE TABLE only (skipped if D1 already has the table); mutating migrations surfaced in the ADVISORY block with their ALTER commands'],
+  ['--deploy / --db', 'shorthands for --mode 3 / --mode 2'],
+  ['--allow-account-change', 'continue on a different Cloudflare account than lw-state.json records'],
+  ['--yes, -y', 'accept every default, never prompt (schema drift and an unconfirmed account change still stop)'],
+];
+
+const exits = [
+  ['0', 'success; for --plan, no blocking issue found'],
+  ['1', 'operational failure: build, wrangler create/execute/deploy, an unreadable table count or whoami, an incomplete --plan --check'],
+  ['2', 'usage/config/state refusal: bad flags, missing artisan, invalid JSONC, corrupt state, missing D1, account mismatch, schema drift under --yes'],
+];
+---
+
+<Docs
+  title="CLI reference"
+  description="Every laravel-workers command, the deploy flags, and the exit codes CI can branch on."
+  slug="cli"
+  lead="One binary, ten commands, and a deploy surface that refuses rather than guesses. Exit codes are part of the contract."
+  source={`README.md §CLI, §deploy — bin/laravel-workers.mjs — repository ${site.source}`}
+>
+  <MiniFig name="cli-map" />
+  <h2 id="commands">Commands</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">command</th><th scope="col">what it does</th><th scope="col">notes</th></tr></thead>
+      <tbody>
+        {commands.map(([name, what, notes]) => (
+          <tr>
+            <th scope="row" class="mono">laravel-workers {name}</th>
+            <td>{what}</td>
+            <td class="small muted">{notes}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">
+    Without the package installed, prefix every command with <code>npx</code>. Developer tasks are
+    package scripts, not subcommands: <code>npm test</code>, <code>npm run test:corpus</code>,
+    <code>npm run test:sqlite</code>, <code>npm run bench</code>, <code>npm run gate:cpu</code>,
+    <code>npm run check:docs</code>.
+  </p>
+
+  <h2 id="deploy-flags">Deploy flags</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">flag</th><th scope="col">effect</th></tr></thead>
+      <tbody>
+        {deployFlags.map(([flag, effect]) => (
+          <tr><th scope="row" class="mono">{flag}</th><td>{effect}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Any other <code>--flag</code> is forwarded to <code>build</code> (for example
+    <code>--no-cache</code>). <code>--dry-run</code> is rejected with a <code>--plan</code> hint —
+    it is not a synonym.
+  </p>
+
+  <h2 id="exit-codes">Exit codes</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">code</th><th scope="col">meaning</th></tr></thead>
+      <tbody>
+        {exits.map(([code, meaning]) => (
+          <tr><th scope="row" class="mono">{code}</th><td>{meaning}</td></tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="non-interactive">When nothing prompts</h2>
+  <ul>
+    <li><code>--yes</code> takes every default. A D1 with tables and no recorded schema hash stops (exit 2), because the state cannot be verified.</li>
+    <li>Non-TTY with neither <code>--mode</code> nor a D1 flag defaults to mode 1 — build only, never touching Cloudflare.</li>
+    <li>A D1 flag without <code>--mode</code> on a non-TTY implies mode 2: database, no deploy.</li>
+    <li><code>--name</code> alone is not a cloud mode; with build-only it is rejected, because build-only does not edit <code>wrangler.jsonc</code>.</li>
+  </ul>
+
+  <h2 id="version">Version and machine output</h2>
+  <p>
+    <code>laravel-workers --version</code> prints one plain line when stdout is not a terminal, so
+    scripts can read it. On a TTY it prints the mark above it; <code>NO_COLOR</code> and
+    <code>FORCE_COLOR</code> choose either way.
+  </p>
+  <Code file="shell" code={`laravel-workers --version   # ${site.version}\nlaravel-workers help        # the same text the binary prints`} />
+</Docs>

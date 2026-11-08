@@ -1,0 +1,76 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import { site } from '../../data/site.js';
+
+const faq = [
+  {
+    q: 'Is this a Laravel fork?',
+    a: 'No. Laravel stays your source of truth in development, with its own test suite and PHPUnit. The edge artifact is generated output: static assets, JavaScript handlers and a D1 schema. Your app/ directory does not change to be compiled.',
+  },
+  {
+    q: 'Do I need PHP in production?',
+    a: 'No. PHP runs only at build time, inside the phase workers that dump routes, compile views, read migrations and render snapshots. The deployed Worker is plain JavaScript on a V8 isolate; there is no PHP runtime and no WASM.',
+  },
+  {
+    q: 'What happens to a feature the compiler cannot carry?',
+    a: 'The build fails loud. --strict refuses to produce an artifact for a route it cannot serve, and the error names the construct and the fix. If you want the route, you write a port: a small JavaScript module the build wires in.',
+  },
+  {
+    q: 'Can I use Breeze, Jetstream, Fortify, Sanctum?',
+    a: 'The starter kits are app code: they compile as far as their controllers, requests and views compile. Fortify is mostly routes and actions over the auth kernel, which compiles. Sanctum tokens work with a padanan; SPA authentication through sessions does. Anything a kit does that the subset cannot carry fails loud, with the file named.',
+  },
+  {
+    q: 'What about queues, broadcasts and image resizing?',
+    a: 'They are not compiled. Queue::push(SomeJob::class) fails loud because nothing would consume the job at the edge; images need GD or Imagick, which the platform does not have; broadcasting needs a Durable Object or an external service. Each has its documented padanan on the limits page.',
+  },
+  {
+    q: 'Does my existing Laravel 10/11/12 app work?',
+    a: 'Laravel ≥ 10 is the requirement; the toolchain is tested with 13.37 and 11.34. Whether your app compiles is answered by build --strict before anything is deployed — it names every route that needs a decision and every construct the edge cannot carry.',
+  },
+  {
+    q: 'What does it cost to run?',
+    a: 'Free-plan-first: Workers Free (100k requests/day, 10 ms CPU), D1 Free (100k writes / 5M reads a day) and the D1 blob store for objects, with no credit card. R2 is opt-in and asks for a card; the paid plan is headroom, never a prerequisite.',
+  },
+  {
+    q: 'How do I test an app at the edge locally?',
+    a: 'The compiled worker is an ESM module and the kernel suite runs it under Node with an in-memory D1. For the real thing, wrangler dev serves dist/ plus assets; the deploy preview (--plan) shows what a real run would change before it changes anything.',
+  },
+  {
+    q: 'Is there a path back to PHP?',
+    a: 'Yes. Nothing about the toolchain rewrites your app: delete the build output and the Laravel app is exactly what it was. Running both during a migration is a supported shape — cookies and sessions are parity-checked, so a Laravel-minted cookie opens at the edge.',
+  },
+  {
+    q: 'How do I know the numbers on this site are true?',
+    a: 'The audit is generated from the repository: 118 constructs with a verdict, 47 of which compile, and every one of the 105 Laravel documentation pages mapped. Each figure carries the file and commit it came from; the build fails when the source moves.',
+  },
+];
+---
+
+<Docs
+  title="FAQ"
+  description="The questions this toolchain gets before anyone reads the docs, answered with the limits attached."
+  slug="faq"
+  lead="Short answers, with the honest part included."
+  source={`README.md; docs/READINESS.md — repository ${site.source}`}
+>
+  <div class="faq">
+    {faq.map((item) => (
+      <details>
+        <summary>{item.q}</summary>
+        <p>{item.a}</p>
+      </details>
+    ))}
+  </div>
+
+  <h2 id="still">Still unsure?</h2>
+  <p>
+    Run <code>npx laravel-workers build --strict</code> in your app. It costs nothing, touches no
+    cloud resource, and answers the only question that matters: can this app be served from the
+    edge — and if not, exactly which routes and constructs stand in the way.
+  </p>
+  <p class="small muted">
+    If the answer is “a few”, start with <a href="/docs/routes/">routes &amp; ports</a>. If it is
+    “most of it”, the honest answer is that this is not the toolchain for that app yet — and the
+    build will have told you why, per route.
+  </p>
+</Docs>

@@ -1,191 +1,739 @@
 ---
 import Base from '../layouts/Base.astro';
-import CensusGrid from '../components/CensusGrid.astro';
-import Stat from '../components/Stat.astro';
-import { pct, number, headline, features, constructs } from '../lib/report.js';
+import Pipeline from '../components/Pipeline.astro';
+import Budget from '../components/Budget.astro';
+import MiniFig from '../components/MiniFig.astro';
+import Glyph from '../components/Glyph.astro';
+import Mark from '../components/Mark.astro';
+import Code from '../components/Code.astro';
+import Term from '../components/Term.astro';
+import { site, paths } from '../data/site.js';
 
-const total = headline.constructs.audited;
-const compileShare = pct(headline.constructs.compiles, total);
+const proof = [
+  { value: 'p95 ≤ 5 ms', label: 'compiled handler CPU budget' },
+  { value: '0', label: 'PHP processes at request time' },
+  { value: '55/55', label: 'Blade corpus byte-identical vs PHP 8.3' },
+  { value: '118', label: 'constructs audited, one verdict each' },
+  { value: '105/105', label: 'Laravel docs pages mapped to a verdict' },
+  { value: '5', label: 'Laravel boots per full build, not per request' },
+];
 
-const areas = features.reduce((acc, row) => {
-  acc[row.area] ??= { name: row.area, fits: 0, soft: 0, hard: 0, total: 0 };
-  acc[row.area].total += 1;
-  if (row.klass === 'fits') acc[row.area].fits += 1;
-  else if (row.klass === 'soft') acc[row.area].soft += 1;
-  else acc[row.area].hard += 1;
-  return acc;
-}, {});
-const areaList = Object.values(areas);
+const steps = [
+  {
+    n: 'S0',
+    title: 'Dump',
+    body: 'PHP boots your app and dumps what only Laravel knows: routes, compiled Blade, the schema from your migrations, config, the schedule, events.',
+    out: 'tools/*.php — build time',
+  },
+  {
+    n: 'S1',
+    title: 'Transpile',
+    body: 'Blade becomes JavaScript, routes become a router, migrations become schema.json, controllers become handlers. Outside the supported subset is a compile error.',
+    out: 'tools/*.mjs · compiler/',
+  },
+  {
+    n: 'S2',
+    title: 'Bundle',
+    body: 'The Workers-native kernel and everything generated are bundled into a single Worker ESM. Nothing at request time loads PHP.',
+    out: 'dist/src/worker.mjs',
+  },
+  {
+    n: 'S3',
+    title: 'Prove',
+    body: 'The real Laravel render and the compiled render are compared byte for byte, and the shadow harness diffs a whole request — status, headers, body.',
+    out: 'shadow/ · 55/55 corpus',
+  },
+  {
+    n: 'S4',
+    title: 'Gate',
+    body: '--strict fails the build on any route without a handler, a snapshot or a declared port. A build that cannot serve the app ships no artifact.',
+    out: 'READINESS: …',
+  },
+  {
+    n: 'S5',
+    title: 'Prerender',
+    body: 'Clean GET routes render into static snapshots, served as assets: they cost zero worker invocations. Another phase worker, still at build time.',
+    out: 'the 0-invocation tier',
+  },
+  {
+    n: 'S6',
+    title: 'Deploy',
+    body: 'wrangler deploys the Worker with static assets and the D1 schema; the URL, ids and schema hash are recorded locally.',
+    out: 'dist/ → Workers + D1',
+  },
+];
 
-const platformRows = features.filter((row) => row.klass !== 'fits').slice(0, 12);
+const tiers = [
+  {
+    name: 'static',
+    value: '0 invocations',
+    body: 'Built assets served by Workers Static Assets. Free, cached at the edge, no handler runs.',
+  },
+  {
+    name: 'snapshot',
+    value: 'prerendered HTML',
+    body: 'Clean GET routes render at build time into static files. Same speed as static; data as of the build.',
+  },
+  {
+    name: 'compiled',
+    value: 'p95 ≤ 5 ms',
+    body: 'Router → middleware → controller → D1, as JavaScript. Sessions, CSRF, validation and Eloquent on the Workers kernel.',
+  },
+  {
+    name: 'port',
+    value: 'your JavaScript',
+    body: 'When a construct cannot be compiled, a port handler replaces that route. Declared, not hidden — and it still fails the build if left unanswered.',
+  },
+];
+
+const compiles = [
+  {
+    area: 'views',
+    items: ['@extends / @section', '@if / @foreach / @switch', '{{ e($x) }}', '@vite', '@csrf', 'translations at build'],
+  },
+  {
+    area: 'http',
+    items: ['{param} / {param?}', 'OPTIONS / 405', 'route-model binding', 'FormRequest', 'redirect()->intended()', 'signed URLs'],
+  },
+  {
+    area: 'data',
+    items: ['where / join / group', 'paginate()', 'hasMany / belongsTo', 'casts + mutators', 'soft deletes', 'D1 blob storage'],
+  },
+  {
+    area: 'auth & state',
+    items: ['session guard', 'remember-me', 'CSRF tokens', 'Gate::allows()', 'throttle:n,m', 'bcrypt parity'],
+  },
+  {
+    area: 'platform',
+    items: ['Mail::to()->send()', 'Event::dispatch()', 'schedule → cron', 'Cache (D1)', 'uploads', 'Log'],
+  },
+  {
+    area: 'escape hatch',
+    items: ['registry.json ports', 'guard ports', 'static / ignore', '--scaffold stubs'],
+  },
+];
+
+const stack = [
+  { mark: 'laravel', name: 'Laravel ≥ 10', note: 'your app stays the source of truth; nothing in app/ changes to be compiled' },
+  { mark: 'php', name: 'PHP ≥ 8.3', note: 'build time only: dumps, view compilation, schema, prerender. 8.3.30 is the parity oracle' },
+  { mark: 'node', name: 'Node ≥ 22', note: 'runs the CLI and the build; the compiler itself is JavaScript' },
+  { mark: 'bun', name: 'Bun ≥ 1.0', note: 'the fast path: vendor provisioning and your frontend build, with npm as the fallback' },
+  { mark: 'workers', name: 'Cloudflare Workers', note: 'the runtime: V8 isolates, free plan first, 10 ms CPU per invocation' },
+  { mark: 'd1', name: 'Cloudflare D1', note: 'database and blob store; the schema is generated from your migrations at build time' },
+  { mark: 'vite', name: 'Vite', note: 'untouched: the build runs your own build script and verifies the manifest' },
+  { mark: 'wrangler', name: 'wrangler 4.x', note: 'not bundled — reached through npx, and a wrangler you already have wins' },
+];
+
+const faq = [
+  {
+    q: 'Is this a Laravel fork?',
+    a: 'No. Laravel stays your source of truth in development, with its own test suite and PHPUnit. The edge artifact is generated output: static assets, JavaScript handlers and a D1 schema. Nothing in your app/ directory has to change to be compiled.',
+  },
+  {
+    q: 'Do I need PHP in production?',
+    a: 'No. PHP runs only at build time, inside the phase workers that dump routes, compile views, read migrations and render snapshots. The deployed Worker is plain JavaScript on a V8 isolate; there is no PHP runtime and no WASM.',
+  },
+  {
+    q: 'What happens to a feature the compiler cannot carry?',
+    a: 'The build fails loud. --strict refuses to produce an artifact for a route it cannot serve, and the error names the construct and the fix. If you want the route, you write a port — a small JavaScript module the build wires in.',
+  },
+  {
+    q: 'What about queues, broadcasts and image resizing?',
+    a: 'They are not compiled. Queue::push(SomeJob::class) fails loud because nothing would consume the job at the edge; images need GD/Imagick, which the platform does not have. Both have documented home in the limits page, with the Cloudflare service or port that replaces them.',
+  },
+  {
+    q: 'Does my existing Laravel 10/11/12 app work?',
+    a: 'Laravel ≥ 10 is the requirement. Whether your app compiles is answered by build --strict before anything is deployed: it names every route that needs a decision and every construct the edge cannot carry. It never guesses.',
+  },
+  {
+    q: 'What does it cost to run?',
+    a: 'Free-plan-first. Workers Free gives 100k requests/day and 10 ms CPU per invocation; D1 Free covers 100k writes and 5M reads a day; the D1 blob store covers storage without a credit card. R2 is opt-in (and asks for a card); the paid plan is headroom, never a prerequisite.',
+  },
+  {
+    q: 'How do I know the numbers on this page are true?',
+    a: 'The audit section is generated from the repository itself: 118 constructs with a verdict, 47 of which compile, and all 105 Laravel documentation pages mapped. Every figure carries the file and commit it came from, and the build fails when the source moves.',
+  },
+];
+
+const start = `# in a real Laravel app (vendor + public/build there)
+npm i -D laravel-workers
+
+npx laravel-workers build --strict     # dist/ — compile only
+npx laravel-workers deploy             # build, then D1 (+ deploy) on request
+npx laravel-workers deploy --plan --mode 3 --d1-auto   # preview; changes nothing`;
+
+const port = `// ports/seal-guard.mjs — a guard the app registers itself
+export default {
+  async user(ctx) {
+    const id = await readToken(ctx.request, ctx.app.env.SEAL_KEY);
+    return id === null ? null : ctx.app.models.User.find(ctx.app.db, id);
+  },
+};`;
+
+const ci = `- name: Edge build (--strict)
+  run: |
+    set -o pipefail
+    npx laravel-workers build --no-cache 2>&1 | tee edge-build.log
+- name: Verdict
+  if: always()
+  uses: arfoux/laravel-workers/action/verdict@v1`;
+
+const readme = [
+  { t: '$ npx laravel-workers build --strict', tone: 'p' },
+  { t: '… schema → snapshots → views → metadata → controllers', tone: 'dim' },
+  { t: 'READINESS: RUNS ON THE EDGE', tone: 'ok' },
+  { t: '  every route is served by a compiled handler, a snapshot or a port;', tone: 'dim' },
+  { t: '  no route is ignored, and no binding is missing.', tone: 'dim' },
+];
+
+const deployTerm = [
+  { t: '$ npx laravel-workers deploy --plan --mode 3 --d1-auto', tone: 'p' },
+  { t: 'mode          3 · build + database + deploy', tone: 'dim' },
+  { t: 'worker        my-laravel-app', tone: 'dim' },
+  { t: 'database      create "my-laravel-app-db" (none recorded)', tone: 'dim' },
+  { t: 'schema        dist/schema.sql · not checked by --plan', tone: 'dim' },
+  { t: 'exit          0 — actionable', tone: 'ok' },
+  { t: '' },
+  { t: '$ npx laravel-workers deploy', tone: 'p' },
+  { t: '→ built dist/ · READINESS: RUNS ON THE EDGE', tone: 'ok' },
+  { t: '→ D1 "my-laravel-app-db" ready', tone: 'dim' },
+  { t: '→ deployed · https://my-laravel-app.example.workers.dev', tone: 'ok' },
+];
+
+const verdictSample = [
+  { t: '# Verdict: RUNS WITH DECLARED GAPS', tone: 'ok' },
+  { t: '2 declared gaps — your decision, and they ship', tone: 'dim' },
+  { t: '  GET /health   ignored in registry.json', tone: 'warn' },
+  { t: '  (an ignored route answers 404 at the edge; Laravel still serves it locally)', tone: 'dim' },
+];
 ---
 
 <Base
-  title={`laravel-workers report: ${number(headline.constructs.compiles)} of ${number(total)} audited constructs compile`}
-  description="Every route of a Laravel app gets a compiled handler, a snapshot or a port; everything the compiler cannot carry fails the build. The numbers, the gaps and the ledger, extracted from the repository."
+  title="laravel-workers — compile Laravel to a Cloudflare Worker"
+  description="Compile a Laravel app to a JS Worker at build time. Blade, routes, Eloquent, sessions and D1 on Cloudflare Workers — no PHP at request time, no WASM, no boot per request. Anything the compiler cannot carry fails the build."
 >
-  <section class="hero">
-    <div class="shell hero__grid">
-      <div>
-        <p class="verdict">
-          <span class="verdict__value">{headline.verdict.badge}</span>
-          <span class="muted">the verdict badge in README.md; CI heads its pull-request comment{' '}<code>{headline.verdict.heading}</code></span>
-        </p>
-        <h1>{number(headline.constructs.compiles)} of {number(total)} audited constructs compile</h1>
-        <p class="lede">
-          A Laravel app is compiled to a plain JavaScript Worker at build time: no PHP and no WASM at
-          the edge. What the compiler cannot carry does not degrade quietly, it fails the build. Below
-          is the whole census behind that claim, with the file each number came from.
-        </p>
-        <div class="hero__actions">
-          <a class="button button--primary" href="/constructs/">Read the census</a>
-          <a class="button" href="/gaps/">What fails loud</a>
-          <a class="button" href="https://github.com/arfoux/laravel-workers">Repository</a>
-        </div>
-      </div>
+  <div class="landing">
+    <section class="lhero">
+      <div class="shell">
+        <div class="lhero__inner">
+          <p class="lhero__eyebrow">
+            <span class="dot" data-verdict="compiles" aria-hidden="true"></span>
+            v{site.version} · {site.license} · Node {site.engines.node} · Bun {site.engines.bun}
+          </p>
 
-      <figure class="hero__figure">
-        <div class="grid__head">
-          <span class="grid__title">the census, {number(total)} cells</span>
-          <span class="count">
-            {number(headline.constructs.compiles)} compile · {number(headline.constructs.failsLoud)} fail loud · {number(headline.constructs.documented)} documented
-          </span>
-        </div>
-        <ul class="cells cell-grid" aria-hidden="true">
-          {constructs.map((row) => (
-            <li class="mini" data-verdict={row.verdict}></li>
-          ))}
-        </ul>
-        <ul class="legend">
-          <li><span class="swatch" style="background:var(--compiles)"></span>compiles</li>
-          <li><span class="swatch" style="background:var(--blocked)"></span>fails loud</li>
-          <li><span class="swatch" style="background:var(--documented)"></span>documented</li>
-        </ul>
-        <figcaption class="small muted">
-          One cell per construct audited in <code>tools/constructs.json</code>.
-        </figcaption>
-      </figure>
-    </div>
-  </section>
+          <h1>Your Laravel app, <em>compiled</em> to a Worker.</h1>
 
-  <section class="section shell" aria-labelledby="numbers-title">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">the numbers</p>
-        <h2 id="numbers-title">Four tallies, one source each</h2>
-      </div>
-      <p>
-        Each figure is regenerated by <code>scripts/extract-lw.mjs</code> from the file the repository
-        itself publishes it in, and the site fails its own check when a figure drifts.
-      </p>
-    </div>
+          <p class="lhero__sub">
+            Blade, routes, Eloquent, sessions and D1 run on Cloudflare Workers — compiled at build
+            time and byte-checked against PHP 8.3. No PHP at request time, no WASM, no boot that
+            spends a second of CPU against a 10 ms budget.
+          </p>
 
-    <div class="cols cols--halves">
-      <div class="panel">
-        <div class="stats">
-          <Stat count={headline.constructs.compiles} label="constructs compile" verdict="compiles" />
-          <Stat count={headline.constructs.failsLoud} label="fail loud (never silent)" verdict="fails-loud" />
-          <Stat count={headline.constructs.documented} label="documented build-level" verdict="documented" />
-        </div>
-        <p class="small muted">
-          {compileShare}% of the {number(total)} constructs audited in <code>tools/constructs.json</code>,
-          tallied the same way <code>tools/docs-counts.mjs</code> tallies them into README.
-        </p>
-      </div>
-
-      <div class="panel">
-        <div class="stats">
-          <Stat count={headline.facades.classified} label={`of ${headline.facades.total} Laravel 13 facades classified`} verdict="compiles" />
-          <Stat count={headline.corpus.identical} label="Blade cases byte-identical vs PHP 8.3" verdict="compiles" />
-          <Stat count={headline.docs.pages} label="Laravel docs pages with a verdict" verdict="compiles" />
-        </div>
-        <p class="small muted">
-          The facade census counts the vendored <code>Illuminate/Support/Facades</code> directory; the
-          docs figure is the row count of the coverage index in <code>MAP.md</code> section C, which
-          allows no blank verdict.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <section class="section shell" aria-labelledby="grid-title">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">one cell, one construct</p>
-        <h2 id="grid-title">The census as a field</h2>
-      </div>
-      <p>
-        Filter by verdict, or click a cell for what it is and why it lands there. Keyboard: tab to a
-        cell, then the arrow keys move through the visible ones.
-      </p>
-    </div>
-
-    <CensusGrid constructs={constructs} />
-  </section>
-
-  <section class="section shell" aria-labelledby="areas-title">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">by area</p>
-        <h2 id="areas-title">Where the wall is</h2>
-      </div>
-      <p>
-        The feature map in <code>MAP.md</code> section 5, one row per Laravel capability. Rows class
-        themselves as fits, documented trade, or platform wall.
-      </p>
-    </div>
-
-    <div class="table-wrap">
-      <table>
-        <caption>{number(features.length)} rows from MAP.md §5, grouped by area.</caption>
-        <thead>
-          <tr>
-            <th scope="col">area</th>
-            <th scope="col">rows</th>
-            <th scope="col">fits</th>
-            <th scope="col">documented trade</th>
-            <th scope="col">platform wall</th>
-          </tr>
-        </thead>
-        <tbody>
-          {areaList.map((area) => (
-            <tr>
-              <th scope="row">{area.name}</th>
-              <td class="mono">{area.total}</td>
-              <td class="mono">{area.fits}</td>
-              <td class="mono">{area.soft}</td>
-              <td class="mono">{area.hard}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <section class="section shell" aria-labelledby="read-title">
-    <div class="section-head">
-      <div>
-        <p class="eyebrow">read next</p>
-        <h2 id="read-title">Four ways into the same evidence</h2>
-      </div>
-      <p>The pages are ordered the way an adoption decision is made.</p>
-    </div>
-
-    <ul class="list">
-      {[
-        { href: '/coverage/', title: 'coverage', blurb: `The ${number(headline.docs.pages)} Laravel documentation pages, each with the verdict the project gives it, and the CPU measurements that set the budget.` },
-        { href: '/gaps/', title: 'gaps', blurb: `The ${number(headline.constructs.failsLoud)} constructs that refuse to compile, why they refuse, and the escape hatch published for each one.` },
-        { href: '/ledger/', title: 'ledger', blurb: 'The shape of the project\'s own audit ledger: how many suggestions it holds, at what severity, and how many are closed.' },
-        { href: '/method/', title: 'method', blurb: 'How every number here is produced, what was measured on this machine, and what could not be verified.' },
-        { href: '/report/', title: 'report', blurb: 'The same extracted data on one page, with nothing behind an interaction, for reading straight through.' },
-      ].map((entry) => (
-        <li>
-          <div class="list__head">
-            <a class="list__title" href={entry.href}>{entry.title}</a>
+          <div class="install">
+            <code id="install">{site.install}</code>
+            <button type="button" data-copy={site.install} data-copied="copied">copy</button>
           </div>
-          <p class="small muted">{entry.blurb}</p>
-        </li>
-      ))}
-    </ul>
-  </section>
+
+          <div class="lhero__actions">
+            <a class="button button--primary" href={paths.docs}>Read the docs <span aria-hidden="true">→</span></a>
+            <a class="button" href={paths.audit}>Audit the 118 constructs</a>
+            <a class="button" href={site.repo} rel="external"><Mark name="github" size={16} /> GitHub</a>
+            <a class="button" href={site.npm} rel="external"><Mark name="npm" size={16} /> npm</a>
+          </div>
+
+          <p class="lhero__note">
+            Laravel ≥ 10 · PHP only at build time · Cloudflare Workers, free plan first
+          </p>
+        </div>
+
+        <Pipeline />
+      </div>
+    </section>
+
+    <section class="proof" aria-label="What is measured">
+      <div class="shell">
+        <div class="proof__grid">
+          {proof.map((item) => (
+            <div>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="sec sec--tight" id="quickstart">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">quick start</p>
+          <h2>Three commands, from a Laravel app to a Worker URL.</h2>
+          <p>
+            No scaffold and no stub: <span class="mono">build --strict</span> refuses to produce an
+            artifact for a route it cannot serve, so the first run tells you exactly where you
+            stand — before anything reaches Cloudflare.
+          </p>
+        </div>
+
+        <div class="split">
+          <div class="steps">
+            <div class="step">
+              <span class="step__n">01</span>
+              <div>
+                <h3>Install the toolchain</h3>
+                <p><code>{site.install}</code> — a dev dependency; your app's own dependencies are untouched.</p>
+              </div>
+              <span class="step__out">dev-only</span>
+            </div>
+            <div class="step">
+              <span class="step__n">02</span>
+              <div>
+                <h3>Compile, strict</h3>
+                <p><code>npx laravel-workers build --strict</code> writes <code>dist/</code> and prints one verdict per route.</p>
+              </div>
+              <span class="step__out">dist/</span>
+            </div>
+            <div class="step">
+              <span class="step__n">03</span>
+              <div>
+                <h3>Preview, then deploy</h3>
+                <p><code>deploy --plan</code> changes nothing; drop <code>--plan</code> to create D1 and deploy.</p>
+              </div>
+              <span class="step__out">wrangler</span>
+            </div>
+          </div>
+
+          <div class="stack" style="--gap: 1rem">
+            <Code file="quick start" code={start} />
+            <div class="verdicts">
+              <span class="v" data-k="runs">RUNS ON THE EDGE</span>
+              <span class="v" data-k="gaps">RUNS WITH DECLARED GAPS</span>
+              <span class="v" data-k="no">DOES NOT RUN</span>
+            </div>
+            <p class="small muted">
+              The verdict is about routes, not data. What it does not promise is that your database
+              is populated — that is <span class="mono">deploy</span>'s D1 step and your rows.{' '}
+              <a href="/docs/">The docs start here →</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec sec--tight">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">runs on</p>
+          <h2>The stack it assumes, and what it brings.</h2>
+          <p>
+            Eight moving parts, two of them engine choices. Everything here is either already in
+            your app or installed by the toolchain on the way past.
+          </p>
+        </div>
+
+        <div class="marks">
+          {stack.map((item) => (
+            <div class="marks__item">
+              <Mark name={item.mark} size={22} />
+              <span class="marks__name">{item.name}</span>
+              <span class="marks__note">{item.note}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">why</p>
+          <h2>A 10 ms budget does not fit a one-second boot.</h2>
+          <p>
+            Running PHP inside a Worker boots Laravel on every request. Measured on the Free plan,
+            that burst costs <span class="mono">1,008–2,018 ms</span> of CPU against a{' '}
+            <span class="mono">10 ms</span> budget — so the platform answers 503. {site.name} moves
+            the boot to build time.
+          </p>
+        </div>
+
+        <div class="split split--wide-left">
+          <div class="stack" style="--gap: 1.25rem">
+            <Budget />
+            <MiniFig name="request-path" />
+          </div>
+
+          <div class="cards" style="grid-template-columns: 1fr">
+            <div class="card">
+              <div class="card__head">
+                <Glyph name="layers" class="glyph--accent" />
+                <span class="card__num mono">the move</span>
+              </div>
+              <h3>Boot once, ship plain JS</h3>
+              <p>
+                Every PHP-live step runs at build time, one Laravel boot per phase that has work.
+                The artifact is JavaScript, static assets and a schema — not a PHP runtime.
+              </p>
+            </div>
+            <div class="card">
+              <div class="card__head">
+                <Glyph name="shield" class="glyph--ok" />
+                <span class="card__num mono">the guarantee</span>
+              </div>
+              <h3>Nothing silently wrong</h3>
+              <p>
+                A route the compiler cannot serve fails <span class="mono">--strict</span>. There is
+                no fallback that answers a different thing than Laravel would.
+              </p>
+            </div>
+            <div class="card">
+              <div class="card__head">
+                <Glyph name="edge" class="glyph--accent" />
+                <span class="card__num mono">the shape</span>
+              </div>
+              <h3>Free plan first</h3>
+              <p>
+                Workers free, D1 free, the D1 blob store for objects — no credit card. R2 and the
+                paid plan are opt-in, never a prerequisite.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="how">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">how it works</p>
+          <h2>Seven stages. PHP lives in one of them.</h2>
+          <p>
+            The build is a pipeline with a hard boundary: everything that needs Laravel happens at
+            build time, in phase workers that each boot the app at most once — and everything the
+            edge serves is generated. The phases are measured, not estimated.
+          </p>
+        </div>
+
+        <div class="split">
+          <div class="steps">
+            {steps.map((step) => (
+              <div class="step">
+                <span class="step__n">{step.n}</span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </div>
+                <span class="step__out">{step.out}</span>
+              </div>
+            ))}
+          </div>
+
+          <div class="stack" style="--gap: 1.2rem">
+            <Term title="build" lines={readme} />
+            <div class="panel">
+              <h3>Unchanged inputs cost nothing</h3>
+              <p class="small muted" style="margin: 0.3rem 0 0">
+                The build hashes its inputs by content — app sources, the autoloader, tool sources,
+                <span class="mono">.env</span>, the PHP version and curated <span class="mono">LW_*</span>
+                keys. A hit restores <span class="mono">dist/</span> in ≈1.3 s instead of ≈35 s, with
+                zero Laravel boots. <span class="mono">--no-cache</span> is the escape hatch, and it
+                is what CI should use: a cache hit prints no READINESS block.
+              </p>
+            </div>
+            <p class="small muted">
+              Full build, 43-route fixture: exactly <strong>5 Laravel boots</strong> —
+              schema → snapshots → route/error views → metadata → controller views. Route export,
+              config, schedule and metadata extraction never boot PHP.
+            </p>
+          </div>
+        </div>
+
+        <div class="figrow">
+          <MiniFig name="boots" />
+          <MiniFig name="cache" />
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">the artifact</p>
+          <h2>Four tiers. The first one costs nothing.</h2>
+          <p>
+            A Worker is not one thing. Static files never invoke it, snapshots render once at build
+            time, compiled handlers answer the dynamic routes, and ports cover what the compiler
+            refuses. The build decides per route.
+          </p>
+        </div>
+
+        <div class="cards">
+          {tiers.map((tier) => (
+            <div class="card">
+              <span class="card__num mono">{tier.name}</span>
+              <h3 class="mono" style="font-size: var(--step-1)">{tier.value}</h3>
+              <p>{tier.body}</p>
+            </div>
+          ))}
+        </div>
+
+        <div class="figrow">
+          <MiniFig name="tiers" />
+          <MiniFig name="route-decision" />
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">coverage</p>
+          <h2>What compiles today.</h2>
+          <p>
+            The supported surface is a contract, not a best effort. Every construct in the audit has
+            one of three verdicts — compiles, fails loud, documented — and the compatibility page
+            lists all 118 plus all 105 Laravel documentation pages.
+          </p>
+        </div>
+
+        <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr))">
+          {compiles.map((group) => (
+            <div class="card">
+              <span class="card__num mono">{group.area}</span>
+              <ul class="chips" style="margin-top: 0.4rem">
+                {group.items.map((item) => <li data-state="yes">{item}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <p class="small muted" style="margin-top: 1rem">
+          <a href={paths.compatibility}>The full matrix →</a> · Blade parity is measured against
+          PHP 8.3, not assumed: <span class="mono">55/55</span> corpus cases are byte-identical.
+        </p>
+      </div>
+    </section>
+
+    <section class="sec" id="refusals">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">the refusal</p>
+          <h2>If it cannot be carried, the build stops.</h2>
+          <p>
+            The compiler has a fixed subset and says so. Every refusal names the construct and the
+            way out; nothing is dropped quietly, and nothing is emulated badly.
+          </p>
+        </div>
+
+        <div class="split">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th scope="col">construct</th><th scope="col">why it stops</th><th scope="col">the way out</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row" class="mono">Queue::push(Job::class)</th>
+                  <td>nothing would consume the job at the edge</td>
+                  <td>Cloudflare Queues + your consumer, or a D1 row a cron reads</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="mono">Storage::disk('named')</th>
+                  <td>each disk needs its own bucket; R2 asks for a card</td>
+                  <td>the default disk, or an explicit R2 binding</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="mono">&lt;x-components&gt;</th>
+                  <td>they compile to a view runtime the edge does not carry</td>
+                  <td>a partial today, or a port</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="mono">config('app.custom')</th>
+                  <td>the config dump carries framework keys plus declared groups</td>
+                  <td><span class="mono">registry.json</span> → a declared group, e.g. <span class="mono">"config": ["app"]</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="stack" style="--gap: 1rem">
+            <MiniFig name="limits-wall" />
+            <Code file="ports/seal-guard.mjs" code={port} />
+            <div class="panel">
+              <h3>Ports are first-class</h3>
+              <p class="small muted" style="margin: 0.3rem 0 0">
+                A port is an ES module the build imports statically — no dynamic module load, which
+                the Workers runtime forbids. <span class="mono">--scaffold</span> writes a 501 stub
+                for every route that needs one, so the gap is a file you can see, not a surprise in
+                production.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="deploy">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">deploy</p>
+          <h2>Preview it. Then let it do the build.</h2>
+          <p>
+            <span class="mono">deploy</span> asks only what it cannot decide: worker name, database,
+            and whether to deploy. <span class="mono">--plan</span> answers all of it without
+            touching anything — no build, no writes, no prompts.
+          </p>
+        </div>
+
+        <div class="split">
+          <div class="stack" style="--gap: 1.2rem">
+            <Term title="deploy" lines={deployTerm} />
+            <MiniFig name="deploy-modes" />
+          </div>
+          <div class="stack" style="--gap: 1rem">
+            <div class="verdicts">
+              <span class="v" data-k="runs">RUNS ON THE EDGE</span>
+              <span class="v" data-k="gaps">RUNS WITH DECLARED GAPS</span>
+              <span class="v" data-k="no">DOES NOT RUN</span>
+            </div>
+            <p class="small muted">
+              The verdict is about routes, not data: every route has a handler, a snapshot or a
+              declared port. What it does not promise is that your database is populated — that is{' '}
+              <span class="mono">deploy</span>'s D1 step and your rows.{' '}
+              <a href="/docs/deploy/">The deploy guide →</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="ci">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">ci</p>
+          <h2>A verdict a reviewer can read.</h2>
+          <p>
+            The tool decides, the reporter publishes, and your pipeline schedules it. Three layers,
+            and the boundary is the point: a green check means one specific thing.
+          </p>
+        </div>
+
+        <div class="split">
+          <div class="stack" style="--gap: 1rem">
+            <Code file=".github/workflows/ci.yml" code={ci} />
+            <p class="small muted">
+              Two details are not optional: <span class="mono">--no-cache</span> (a cache hit prints
+              no READINESS block, and the reporter would read an empty log) and a valid random
+              <span class="mono">APP_KEY</span> in the check job.
+            </p>
+          </div>
+          <div class="stack" style="--gap: 1.2rem">
+            <MiniFig name="ci-layers" />
+            <Term title="pull request comment" lines={verdictSample} />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">the honest half</p>
+          <h2>What “runs on the edge” does not claim.</h2>
+          <p>
+            The verdict is about routes: every route is served, nothing is ignored by accident, no
+            binding is missing. It does not say your data is there, that every Laravel package has
+            an equivalent, or that the platform has no limits.
+          </p>
+        </div>
+
+        <div class="split">
+          <div class="table-wrap">
+            <table>
+              <caption>Workers Free — the tier this toolchain is shaped around.</caption>
+              <thead>
+                <tr><th scope="col">limit</th><th scope="col">free plan</th><th scope="col">what it means</th></tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row" class="mono">CPU per request</th><td class="mono">10 ms</td><td>the compiled handler budget is p95 ≤ 5 ms; the platform enforces softly at ~2 s</td></tr>
+                <tr><th scope="row" class="mono">requests</th><td class="mono">100k / day</td><td>static assets do not count as invocations</td></tr>
+                <tr><th scope="row" class="mono">subrequests</th><td class="mono">50 / request</td><td>eager loading exists for a reason</td></tr>
+                <tr><th scope="row" class="mono">D1 writes</th><td class="mono">100k / day</td><td>cookie sessions write zero rows; throttle only what needs it</td></tr>
+                <tr><th scope="row" class="mono">storage</th><td class="mono">D1 blobs, 1.5 MB</td><td>R2 takes over for bigger objects or many of them — and asks for a card</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="stack" style="--gap: 1rem">
+            <div class="panel">
+              <h3>Prerendered means as-of-build</h3>
+              <p class="small muted" style="margin: 0.3rem 0 0">
+                A page that reads rows the build has never seen prerenders as it looks with an empty
+                table. The build gives the app a throwaway SQLite for that reason — your database and
+                the cloud D1 are untouched.
+              </p>
+            </div>
+            <div class="panel">
+              <h3>Local-only stays local</h3>
+              <p class="small muted" style="margin: 0.3rem 0 0">
+                Artisan, Dusk, Telescope, Sail, Horizon dashboards: 26 of the 105 documentation pages
+                are not part of a deployed app at all. The coverage page says which, and why.
+              </p>
+            </div>
+            <p class="small muted">
+              <a href="/docs/limits/">The limits page →</a> ·
+              <a href="/audit/coverage/">The 105-page coverage table →</a>
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec">
+      <div class="shell">
+        <div class="sec__head">
+          <p class="eyebrow">questions</p>
+          <h2>What people ask first.</h2>
+        </div>
+        <div class="faq">
+          {faq.map((item) => (
+            <details>
+              <summary>{item.q}</summary>
+              <p>{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="sec sec--tight">
+      <div class="shell">
+        <div class="cta">
+          <p class="eyebrow" style="margin: 0">start</p>
+          <h2>Put the build where the boot belongs.</h2>
+          <p>
+            {site.install} — then <span class="mono">npx laravel-workers build --strict</span> tells
+            you the truth about your app before you deploy anything.
+          </p>
+          <div class="lhero__actions" style="justify-content: flex-start">
+            <a class="button button--primary" href={paths.docs}>Getting started <span aria-hidden="true">→</span></a>
+            <a class="button" href={site.npm} rel="external"><Mark name="npm" size={16} /> npm</a>
+            <a class="button" href={site.repo} rel="external"><Mark name="github" size={16} /> GitHub</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script is:inline>
+    const button = document.querySelector('[data-copy]');
+    if (button) {
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.copy);
+          const label = button.textContent;
+          button.textContent = button.dataset.copied;
+          setTimeout(() => { button.textContent = label; }, 1600);
+        } catch {}
+      });
+    }
+  </script>
 </Base>

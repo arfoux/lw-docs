@@ -1,0 +1,103 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const registry = `{
+  "autoSnapshot": true,
+  "static":  { "GET /health": "public/health.html" },
+  "ports":   { "POST /hooks/stripe": "stripe-webhook" },
+  "ignore":  { "GET /admin/legacy": "served by a separate Worker" },
+  "views":   {},
+  "guards":  { "seal": "seal-guard" },
+  "config":  ["needs"]
+}`;
+
+const port = `// ports/stripe-webhook.mjs
+export default {
+  async fetch(ctx) {
+    const body = await ctx.request.text();
+    if (!validSignature(body, ctx.app.env.STRIPE_SECRET)) {
+      return new Response('bad signature', { status: 400 });
+    }
+    await ctx.app.db.prepare('insert into events (body) values (?)').bind(body).run();
+    return new Response('ok');
+  },
+};`;
+---
+
+<Docs
+  title="Routes & ports"
+  description="What --strict enforces, how registry.json declares a route's tier, and how a port replaces one the compiler will not carry."
+  slug="routes"
+  lead="Every route gets a decision before the build finishes: a compiled handler, a snapshot, a static file, a port — or a declared gap. Silence is a failed build."
+  source={`README.md §Compiles today, §A guard port; tools/init.mjs; tools/ports.mjs — repository ${site.source}`}
+>
+  <h2 id="strict">What --strict enforces</h2>
+  <p>
+    The route list comes from Laravel itself (<code>route:list</code>, dumped at build time). For
+    each route the compiler asks: can this handler be compiled? If yes, it is. If not, the route
+    must be <em>declared</em> — a static file, a port, or an explicit <code>ignore</code>. An
+    undeclared route fails the build; a declared one ships and is named in the verdict.
+  </p>
+  <p>
+    That is the whole guarantee. “Runs on the edge” never means “every route was compiled”: it
+    means every route has a decision, and the ignored ones are printed where a reviewer can see
+    them.
+  </p>
+
+  <MiniFig name="route-decision" />
+
+  <h2 id="registry">registry.json</h2>
+  <p>
+    One file at the app root, optional. <code>init</code> scaffolds it; the build reads it if
+    present.
+  </p>
+  <Code file="registry.json" code={registry} />
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">key</th><th scope="col">meaning</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="mono">autoSnapshot</th><td>render clean GET routes at build time into static snapshots (the 0-invocation tier) unless a route opts out</td></tr>
+        <tr><th scope="row" class="mono">static</th><td>route → file in <code>public/</code>: served as an asset, never invokes the worker</td></tr>
+        <tr><th scope="row" class="mono">ports</th><td>route → port name: the module in <code>ports/&lt;name&gt;.mjs</code> answers that route</td></tr>
+        <tr><th scope="row" class="mono">ignore</th><td>route → reason: declared away. It answers 404 at the edge and is listed in the READINESS block</td></tr>
+        <tr><th scope="row" class="mono">guards</th><td>auth driver → port name, for a driver the app registers itself (<code>Auth::extend</code>)</td></tr>
+        <tr><th scope="row" class="mono">config</th><td>config groups the runtime may read. Without a declaration, a <code>config('group.key')</code> the build cannot answer fails loud</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="ports">A port</h2>
+  <p>
+    A port is an ES module with a <code>fetch(ctx)</code> method — ordinary JavaScript at the edge,
+    with access to the app's compiled bindings. The build imports it statically; dynamic module
+    loading is forbidden in the Workers runtime.
+  </p>
+  <Code file="ports/stripe-webhook.mjs" code={port} />
+  <p class="small muted">
+    <code>build --scaffold</code> writes a 501 stub for every route that needs a port, so the gap
+    becomes a file you can see instead of a surprise in production. A guard port is written by
+    hand: it implements <code>user(ctx)</code>, not <code>fetch</code> — see
+    <a href="/docs/auth/">auth &amp; sessions</a>.
+  </p>
+
+  <h2 id="guard-ports">Guard ports</h2>
+  <p>
+    A non-session guard driver the app registers itself (<code>Auth::extend('seal', …)</code>) is
+    PHP the compiled rung cannot run — and answering “no user” would let a guarded route through.
+    The refusal is therefore config-level, before routes are compiled: declaring the driver
+    (<code>guards</code> → <code>"seal": "seal-guard"</code>) and providing <code>ports/seal-guard.mjs</code>
+    with <code>async user(ctx)</code> turns it green. The middleware, <code>auth()-&gt;user()</code>,
+    the 401 and the redirect stay compiled; only the driver is yours.
+  </p>
+
+  <h2 id="mismatches">When a route changes shape</h2>
+  <p>
+    If two routes would collide at the edge (same method and pattern after compilation), the build
+    names both and suggests declaring one in <code>registry.json</code>. It does not pick a winner:
+    the order a framework resolves routes in is part of its contract, and guessing it is exactly
+    the class of silent difference this toolchain refuses.
+  </p>
+</Docs>

@@ -1,0 +1,431 @@
+---
+// Small diagrams. The hero figure explains the whole pipeline; these explain one idea
+// each, where the prose would otherwise be a wall of text. Same construction as the hero:
+// flat nodes, hairline edges, mono labels, no animation — a figure that cannot be read in
+// a screenshot is not finished.
+//
+// The SVG is decorative (`aria-hidden`); the <figcaption> is the accessible description,
+// so the meaning survives with the image gone.
+const NODE_H = 26;
+
+const node = (x, y, w, text, sub = null, tone = '') =>
+  `<g class="f-node ${tone}"><rect x="${x}" y="${y}" width="${w}" height="${NODE_H}" rx="4"/>` +
+  `<text class="f-m" x="${x + 10}" y="${y + (sub ? 12 : 17)}">${text}</text>` +
+  (sub ? `<text class="f-s" x="${x + 10}" y="${y + 23}">${sub}</text>` : '') +
+  '</g>';
+
+const edge = (x1, y1, x2, y2, dashed = false) =>
+  `<path class="f-edge${dashed ? ' f-edge--dash' : ''}" d="M${x1} ${y1}H${x2 === x1 ? x2 : x2}V${y2}"/>`;
+
+const arrow = (x1, y1, x2, y2) => `<path class="f-arrow" d="M${x1} ${y1}H${x2}V${y2}" marker-end="url(#f-tip)"/>`;
+
+const defs = `<defs><marker id="f-tip" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l8 4-8 4z" fill="currentColor"/></marker></defs>`;
+
+const label = (x, y, text, tone = '') => `<text class="f-l ${tone}" x="${x}" y="${y}">${text}</text>`;
+
+const FIGS = {
+  tiers: {
+    w: 300,
+    h: 132,
+    caption: 'Four tiers, decided per route: a static file, a prerendered snapshot, a compiled handler, or a port.',
+    body:
+      label(0, 12, 'one worker, four ways to answer') +
+      node(0, 22, 138, 'static', '0 invocations', 'f-node--ok') +
+      node(0, 60, 138, 'snapshot', 'prerendered at build') +
+      node(162, 22, 138, 'compiled', 'p95 ≤ 5 ms') +
+      node(162, 60, 138, 'port', 'your JavaScript', 'f-node--warn') +
+      `<path class="f-edge" d="M138 35h24"/>` +
+      `<path class="f-edge" d="M138 73h24"/>` +
+      `<path class="f-edge" d="M150 48v0"/>` +
+      label(0, 104, 'per route, and --strict fails if it cannot') +
+      label(0, 118, 'roots: static assets + dist/src/worker.mjs', 'f-l--muted'),
+  },
+
+  boots: {
+    w: 300,
+    h: 118,
+    caption: 'A full build boots Laravel five times — one per phase that has work — and never at request time.',
+    body:
+      label(0, 12, 'one build · five php processes') +
+      [
+        ['schema', 1],
+        ['snapshots', 0],
+        ['views', 1],
+        ['metadata', 0],
+        ['controllers', 0],
+      ]
+        .map(([name, always], index) => {
+          const x = index * 59;
+          return (
+            `<circle class="f-dot${always ? ' f-dot--on' : ''}" cx="${x + 14}" cy="48" r="5"/>` +
+            `<text class="f-s" x="${x}" y="70">${name}</text>` +
+            `<text class="f-s f-s--muted" x="${x}" y="82">${always ? '1 boot' : '0–1 boot'}</text>`
+          );
+        })
+        .join('') +
+      `<path class="f-line" d="M14 48H266"/>` +
+      label(0, 104, 'php boots at build time only', 'f-l--muted'),
+  },
+
+  cache: {
+    w: 300,
+    h: 142,
+    caption: 'Unchanged inputs skip every boot: about 1.3 seconds against about 35 seconds full.',
+    body:
+      label(0, 12, 'hit vs miss, unchanged inputs') +
+      node(0, 24, 92, 'inputs', 'content hash') +
+      node(170, 24, 130, 'dist/', 'restored · ≈1.3 s', 'f-node--ok') +
+      `<path class="f-edge f-edge--dash" d="M92 37h78"/>` +
+      node(0, 86, 92, 'changed', 'one input') +
+      node(170, 86, 130, 'dist/', 'rebuilt · ≈35 s', 'f-node--warn') +
+      `<path class="f-edge f-edge--dash" d="M92 99h78"/>` +
+      label(0, 134, 'a hit needs the same key and an intact dist/', 'f-l--muted'),
+  },
+
+  'route-decision': {
+    w: 300,
+    h: 140,
+    caption: 'Every route gets a decision before the build ends: compiled, snapshot, port — or declared away.',
+    body:
+      label(0, 12, 'one route from route:list') +
+      node(0, 26, 104, 'GET /posts', 'handler resolvable?') +
+      `<path class="f-arrow" d="M104 39h26"/>` +
+      node(148, 4, 148, 'compiled handler', 'controller transpiled', 'f-node--ok') +
+      node(148, 38, 148, 'snapshot', 'clean GET, build time') +
+      node(148, 72, 148, 'port', 'registry.json → ports/', 'f-node--warn') +
+      node(148, 106, 148, 'ignore', 'declared gap, ships as 404', 'f-node--bad') +
+      `<path class="f-edge f-edge--fan" d="M134 39v-18h14M134 39h14M134 39v50h14M134 39v84h14"/>`,
+  },
+
+  'request-path': {
+    w: 300,
+    h: 116,
+    caption: 'A request goes router → middleware → controller → D1 inside one isolate; nothing boots PHP.',
+    body:
+      label(0, 12, 'one request, no php') +
+      node(0, 24, 66, 'router') +
+      node(78, 24, 66, 'middleware') +
+      node(156, 24, 66, 'controller') +
+      node(234, 24, 66, 'D1') +
+      `<path class="f-arrow" d="M66 37h12M144 37h12M222 37h12"/>` +
+      `<text class="f-m f-m--ok" x="0" y="72">p50 5 ms · p95 41 ms · max 62 ms</text>` +
+      label(0, 90, 'page-like probe: 5 hot paths, 50 iterations each', 'f-l--muted') +
+      label(0, 104, 'budget: 10 ms cpu per invocation, free plan', 'f-l--muted'),
+  },
+
+  'ci-layers': {
+    w: 300,
+    h: 126,
+    caption: 'Three layers: the tool decides, the reporter publishes, your pipeline schedules.',
+    body:
+      node(0, 8, 190, 'tool — build --strict', 'decides: READINESS') +
+      node(0, 46, 190, 'reporter — action/verdict', 'publishes one PR comment') +
+      node(0, 84, 190, 'pipeline — ci.yml / deploy.yml', 'schedules when to run') +
+      `<path class="f-edge f-edge--dash" d="M190 21h40v-0M230 59h24M230 97h16"/>` +
+      `<text class="f-s" x="238" y="24">exit code</text>` +
+      `<text class="f-s" x="238" y="62">log</text>` +
+      `<text class="f-s" x="238" y="100">trigger</text>`,
+  },
+
+  'deploy-modes': {
+    w: 300,
+    h: 130,
+    caption: 'Mode 1 compiles, mode 2 adds the database, mode 3 adds the deploy. --plan previews all three.',
+    body:
+      node(0, 10, 128, '1 · build', 'dist/ only') +
+      node(0, 48, 128, '2 · + database', 'create/reuse D1', 'f-node--warn') +
+      node(0, 86, 128, '3 · + deploy', 'wrangler deploy', 'f-node--ok') +
+      `<path class="f-edge" d="M128 23h14M128 61h14M128 99h14"/>` +
+      label(152, 27, 'no cloud') +
+      label(152, 65, 'D1 + schema guard') +
+      label(152, 103, 'URL in lw-state.json') +
+      label(152, 118, '--plan changes nothing', 'f-l--muted'),
+  },
+
+  'session-flow': {
+    w: 300,
+    h: 126,
+    caption: 'The session cookie travels with the request, the row lives in D1, and CSRF and throttling ride the same store.',
+    body:
+      label(0, 12, 'a logged-in request') +
+      node(0, 24, 82, 'cookie', 'AES-CBC + HMAC') +
+      node(104, 24, 82, 'worker', 'SessionGuard') +
+      node(208, 24, 92, 'D1 sessions', 'one row', 'f-node--ok') +
+      `<path class="f-arrow" d="M82 37h22M186 37h22"/>` +
+      `<text class="f-s" x="0" y="72">decrypt → user → rotate</text>` +
+      label(0, 90, 'CSRF and throttle read the same store', 'f-l--muted') +
+      label(0, 104, 'bcrypt cost 10: 93–104 ms, login path only', 'f-l--muted'),
+  },
+
+  'blade-pipeline': {
+    w: 300,
+    h: 132,
+    caption: 'Blade becomes JavaScript, and the render is compared byte for byte against the PHP 8.3 oracle.',
+    body:
+      node(0, 12, 96, 'post.blade', '.blade') +
+      node(0, 52, 96, 'php ast', '@extends …') +
+      node(0, 92, 96, 'js fn', 'render(ctx)') +
+      `<path class="f-arrow" d="M96 25h22V65h-22"/>` +
+      `<path class="f-arrow" d="M96 65h22v40h-22"/>` +
+      label(130, 30, 'blade2php', 'f-l--muted') +
+      label(130, 70, 'transpiler', 'f-l--muted') +
+      node(196, 92, 104, 'PHP 8.3', 'oracle render', 'f-node--ok') +
+      `<path class="f-edge f-edge--dash" d="M48 118v0"/>` +
+      label(130, 112, 'byte-compare → 55/55') +
+      label(0, 126, 'a divergence fails the build', 'f-l--muted'),
+  },
+
+  'frontend-halves': {
+    w: 300,
+    h: 124,
+    caption: 'The backend is compiled, the frontend is built by your own Vite, and both land in one Worker.',
+    body:
+      label(0, 12, 'two halves, one origin') +
+      node(0, 24, 132, 'backend', 'compiled by laravel-workers') +
+      node(0, 62, 132, 'frontend', 'built by your package.json', 'f-node--warn') +
+      node(168, 42, 132, 'dist/public', 'assets + worker', 'f-node--ok') +
+      `<path class="f-arrow" d="M132 37h18V55h18"/>` +
+      `<path class="f-arrow" d="M132 75h18V55h18"/>` +
+      label(0, 104, 'backend-only apps skip this step') +
+      label(0, 118, 'asset requests never invoke the worker', 'f-l--muted'),
+  },
+
+  'guard-port': {
+    w: 300,
+    h: 122,
+    caption: 'A guard driver your app registers is a PHP closure: declare a port and it answers user(ctx) instead.',
+    body:
+      label(0, 12, 'auth:seal with a driver the app registers') +
+      node(0, 24, 128, 'compiled', 'middleware · 401 · redirect', 'f-node--ok') +
+      node(0, 70, 128, 'port', 'ports/seal-guard.mjs', 'f-node--warn') +
+      node(160, 47, 140, 'user(ctx)', 'null is a guest') +
+      `<path class="f-arrow" d="M128 37h24V60h8"/>` +
+      `<path class="f-arrow" d="M128 83h24V60h8"/>` +
+      label(0, 110, 'a throwing port keeps throwing', 'f-l--muted'),
+  },
+
+  'limits-wall': {
+    w: 300,
+    h: 126,
+    caption: 'Where the platform is a wall — queues, images, WebSockets, SMTP — there is a named way out.',
+    body:
+      label(0, 12, 'the wall, and the door') +
+      `<rect class="f-wall" x="0" y="24" width="188" height="72" rx="4"/>` +
+      label(12, 44, 'Queue::push(Job::class)', 'f-l--bad') +
+      label(12, 62, 'images (GD/Imagick)', 'f-l--bad') +
+      label(12, 80, 'WebSockets · SMTP', 'f-l--bad') +
+      node(204, 30, 96, 'ports', 'your JS') +
+      node(204, 66, 96, 'CF services', 'Queues · DO', 'f-node--ok') +
+      `<path class="f-arrow" d="M188 60h16"/>` +
+      label(0, 112, 'the build refuses; it never answers differently', 'f-l--muted'),
+  },
+
+  schema: {
+    w: 300,
+    h: 146,
+    caption: 'Migrations run at build time against an in-memory SQLite; the DDL that comes out is what D1 gets.',
+    body:
+      label(0, 12, 'schema, without a database server') +
+      node(0, 24, 108, 'migrations', 'your app/') +
+      node(0, 64, 108, 'in-memory', 'sqlite, throwaway') +
+      node(0, 104, 108, 'DDL', 'pragma dump') +
+      `<path class="f-arrow" d="M108 37h18V77h-18"/>` +
+      `<path class="f-arrow" d="M108 77h18v40h-18"/>` +
+      node(160, 64, 140, 'dist/schema.sql', 'applied to D1 by deploy', 'f-node--ok') +
+      `<path class="f-arrow" d="M126 117h18"/>` +
+      label(0, 142, 'your database/ is never touched', 'f-l--muted'),
+  },
+
+  'verdict-scale': {
+    w: 300,
+    h: 132,
+    caption: '105 documentation pages split four ways: what runs, what runs with a declared trade, what needs a port, and what is not applicable at the edge.',
+    body:
+      label(0, 12, '105 doc pages, one verdict each') +
+      (() => {
+        const bands = [
+          ['runs', 15, 'f-seg--a'],
+          ['gap', 59, 'f-seg--b'],
+          ['port', 5, 'f-seg--c'],
+          ['n/a', 26, 'f-seg--d'],
+        ];
+        const scale = 296 / 105;
+        let x = 0;
+        const bar = bands.map(([name, count, cls]) => {
+          const w = count * scale;
+          const seg = `<rect class="f-seg ${cls}" x="${x.toFixed(1)}" y="24" width="${w.toFixed(1)}" height="16" rx="2"/>
+            <text class="f-s" x="${(x + w / 2).toFixed(1)}" y="20" text-anchor="middle">${count}</text>`;
+          x += w;
+          return seg;
+        }).join('');
+        const legend = bands.map(([name, count, cls], i) => {
+          const y = 62 + i * 15;
+          return `<rect class="${cls}" x="0" y="${y}" width="10" height="10" rx="2"/>
+            <text class="f-s" x="18" y="${y + 9}">${name}</text>
+            <text class="f-s f-s--muted" x="64" y="${y + 9}">${name === 'gap' ? 'declared trade' : name === 'port' ? 'platform wall' : name === 'runs' ? 'on the edge' : 'local tooling'}</text>`;
+        }).join('');
+        return bar + legend;
+      })() +
+      label(0, 128, 'the same four words come out of your own build', 'f-l--muted'),
+  },
+
+  'status-tally': {
+    w: 300,
+    h: 108,
+    caption: 'The suggestion ledger, by status: 14 still open, 5 closed, 1 marked for a fix — all 20 rows carry a source line.',
+    body:
+      label(0, 12, 'the ledger, by status') +
+      (() => {
+        const rows = [
+          ['OPEN', 14, 'f-seg--b'],
+          ['DONE', 5, 'f-seg--a'],
+          ['FIX', 1, 'f-seg--c'],
+        ];
+        const scale = 200 / 14;
+        return rows.map(([name, count, cls], i) => {
+          const y = 28 + i * 26;
+          const w = Math.max(6, count * scale);
+          return (
+            `<rect class="f-seg ${cls}" x="52" y="${y}" width="${w}" height="15" rx="2"/>
+             <text class="f-s" x="0" y="${y + 12}">${name}</text>
+             <text class="f-s f-s--muted" x="${(52 + w).toFixed(1)}" y="${y + 12}" text-anchor="end">${count} row${count === 1 ? '' : 's'}</text>`
+          );
+        }).join('');
+      })() +
+      label(0, 102, '20 suggestions, every one with a cited file:line', 'f-l--muted'),
+  },
+
+  'severity-stack': {
+    w: 300,
+    h: 126,
+    caption: 'Severity concentrates at the bottom: 224 of 399 rows are P3 notes, 10 are P1.',
+    body:
+      label(0, 12, 'one scratchpad, 399 severity rows') +
+      (() => {
+        const bands = [
+          ['P1', 10, 'f-seg--c'],
+          ['P2', 72, 'f-seg--b'],
+          ['P3', 224, 'f-seg--a'],
+          ['INFO', 93, 'f-seg--d'],
+        ];
+        const scale = 296 / 399;
+        let x = 0;
+        const bar = bands.map(([name, count, cls]) => {
+          const w = count * scale;
+          const seg = `<rect class="f-seg ${cls}" x="${x.toFixed(1)}" y="26" width="${w.toFixed(1)}" height="18" rx="2"/>
+            <text class="f-s" x="${(x + w / 2).toFixed(1)}" y="22" text-anchor="middle">${count}</text>`;
+          x += w;
+          return seg;
+        }).join('');
+        const legend = bands.map(([name, count, cls], i) => {
+          const y = 62 + i * 13;
+          return `<rect class="${cls}" x="0" y="${y}" width="10" height="10" rx="2"/>
+            <text class="f-s" x="18" y="${y + 9}">${name}</text>
+            <text class="f-s f-s--muted" x="52" y="${y + 9}">${name === 'P1' ? 'fails loud' : name === 'P2' ? 'documented' : name === 'P3' ? 'compiles' : 'keep as-is'}</text>`;
+        }).join('');
+        return bar + legend;
+      })() +
+      label(0, 122, '≈ rows: a shape, not a defect count', 'f-l--muted'),
+  },
+
+  'phase-chain': {
+    w: 300,
+    h: 108,
+    caption: 'The audit walks one phase at a time: structure, then line-by-line, then docs, CI and the release path.',
+    body:
+      label(0, 12, 'five sweeps, one order') +
+      [
+        ['1 · structure', 'files, modules'],
+        ['2 · line-by-line', 'kernel + tools'],
+        ['3 · docs', 'README after code'],
+        ['4 · CI', 'actions as run'],
+        ['5 · release', 'tag to npm'],
+      ].map(([name, sub], i) => {
+        const cx = 10 + i * 58;
+        return (
+          `<circle class="f-dot f-dot--on" cx="${cx}" cy="44" r="6"/>
+           <text class="f-s" x="${cx}" y="66" text-anchor="middle">${name}</text>
+           <text class="f-s f-s--muted" x="${cx}" y="80" text-anchor="middle">${sub}</text>` +
+          (i < 4 ? `<path class="f-edge" d="M${cx + 6} 44h${i === 4 ? 9 : 40}"/>` : '')
+        );
+      }).join('') +
+      label(0, 100, 'findings land in the ledger, not the prose', 'f-l--muted'),
+  },
+
+  'cli-map': {
+    w: 300,
+    h: 124,
+    caption: 'Three jobs, one binary: build lays dist/ down, run previews it, test measures it on the platform.',
+    body:
+      label(0, 12, 'lw — one binary, three jobs') +
+      node(0, 24, 96, 'build', 'compiles the app') +
+      node(0, 60, 96, 'run', 'previews locally') +
+      node(0, 96, 96, 'test', 'measures the gate') +
+      `<path class="f-arrow" d="M96 37h74"/>` +
+      `<path class="f-arrow" d="M96 73h74"/>` +
+      `<path class="f-arrow" d="M96 109h74"/>` +
+      node(170, 24, 130, 'dist/', 'assets + worker + D1') +
+      node(170, 60, 130, 'localhost', 'routes + snapshots') +
+      node(170, 96, 130, 'numbers', 'cpu 5/41/62 + verdict'),
+  },
+
+  'proof-stack': {
+    w: 300,
+    h: 122,
+    caption: 'Four levels of evidence: the corpus, the shadow harness, the kernel suite, and the platform’s own CPU numbers.',
+    body:
+      node(0, 8, 300, 'parity — corpus 55/55 · shadow harness', 'laravel render vs compiled render', 'f-node--ok') +
+      node(0, 46, 300, 'integration — kernel suite', 'real SQLite · real request pipeline', 'f-node--ok') +
+      node(0, 84, 300, 'platform — npm run gate:cpu', 'cpuTime and outcome read off the platform', 'f-node--ok'),
+  },
+};
+
+// The component refuses to emit a diagram whose own geometry leaves its canvas: a text
+// label running past the right edge, or a node whose bottom falls outside the viewBox, is
+// a figure that will be clipped on the page and never noticed in a screenshot review.
+// Widths are estimated per class (mono text is wider than sans at the same size), which is
+// deliberately conservative: the check would rather complain early than ship a clip.
+const PER_CHAR = { 'f-m': 6.7, 'f-l': 6.0, 'f-s': 5.1, 'f-s--muted': 5.1, 'f-m--ok': 6.7, 'f-m--warn': 6.7 };
+const fitProblems = [];
+
+const estimate = (cls, text) => {
+  const key = Object.keys(PER_CHAR).find((k) => cls.split(/\s+/).includes(k)) ?? 'f-l';
+  return text.length * PER_CHAR[key];
+};
+
+const checkFigure = (figureName, figure) => {
+  const markup = defs + figure.body;
+  for (const match of markup.matchAll(/<text class="([^"]*)" x="([-\d.]+)" y="([-\d.]+)"[^>]*>([^<]*)<\/text>/g)) {
+    const [, cls, x, y, text] = match;
+    const right = Number(x) + estimate(cls, text);
+    if (right > figure.w - 1) fitProblems.push(`${figureName}: text "${text}" ends at ${Math.round(right)} beyond ${figure.w}`);
+    if (Number(y) > figure.h - 2) fitProblems.push(`${figureName}: text "${text}" sits at y=${y} beyond ${figure.h}`);
+  }
+  for (const match of markup.matchAll(/<rect x="([-\d.]+)" y="([-\d.]+)" width="([-\d.]+)" height="([-\d.]+)"/g)) {
+    const [, x, y, w, h] = match.map(Number);
+    if (x + w > figure.w + 1) fitProblems.push(`${figureName}: a node ends at x=${x + w} beyond ${figure.w}`);
+    if (y + h > figure.h + 1) fitProblems.push(`${figureName}: a node ends at y=${y + h} beyond ${figure.h}`);
+  }
+};
+
+for (const [figureName, figure] of Object.entries(FIGS)) checkFigure(figureName, figure);
+if (fitProblems.length) throw new Error(`MiniFig geometry: ${fitProblems.join('; ')}`);
+
+const { name } = Astro.props;
+const fig = FIGS[name];
+if (!fig) throw new Error(`MiniFig: unknown figure "${name}"`);
+---
+
+<figure class="mini-fig">
+  <div class="mini-fig__frame" style={`aspect-ratio:${fig.w}/${fig.h}`}>
+    <svg
+      class="mini-fig__svg"
+      viewBox={`0 0 ${fig.w} ${fig.h}`}
+      preserveAspectRatio="xMinYMin meet"
+      aria-hidden="true"
+      focusable="false"
+      set:html={defs + fig.body}
+    />
+  </div>
+  <figcaption>{fig.caption}</figcaption>
+</figure>

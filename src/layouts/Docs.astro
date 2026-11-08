@@ -1,0 +1,90 @@
+---
+import Base from './Base.astro';
+import DocsNav from '../components/DocsNav.astro';
+import { docPath, neighbours } from '../data/docs.js';
+import { site } from '../data/site.js';
+
+const { title, description, slug, lead, source } = Astro.props;
+const { previous, next } = neighbours(slug);
+---
+
+<Base title={`${title} — ${site.name} docs`} description={description}>
+  <div class="docs shell">
+    <details class="docs__drawer">
+      <summary>documentation</summary>
+      <nav aria-label="Docs">
+        <DocsNav slug={slug} />
+      </nav>
+    </details>
+
+    <aside class="docs__side">
+      <p class="docs__kicker mono">documentation</p>
+      <nav aria-label="Docs">
+        <DocsNav slug={slug} />
+      </nav>
+      <nav class="docs__toc" aria-label="On this page">
+        <p class="docs__kicker mono">on this page</p>
+        <ol class="docs__toc-list" data-toc-list></ol>
+      </nav>
+    </aside>
+
+    <article class="docs__body">
+      <p class="docs__crumb mono"><a href="/docs/">docs</a> / {title}</p>
+      <h1>{title}</h1>
+      {lead && <p class="docs__lead">{lead}</p>}
+      <div class="prose">
+        <slot />
+      </div>
+      {source && <p class="docs__source small muted">Source: {source}</p>}
+
+      <nav class="docnav" aria-label="Adjacent pages">
+        {previous ? (
+          <a href={docPath(previous.slug)} class="docnav__prev">
+            <span class="small muted">previous</span>
+            <span>{previous.title}</span>
+          </a>
+        ) : (
+          <span />
+        )}
+        {next && (
+          <a href={docPath(next.slug)} class="docnav__next">
+            <span class="small muted">next</span>
+            <span>{next.title}</span>
+          </a>
+        )}
+      </nav>
+    </article>
+  </div>
+<script>
+  // Build an on-this-page TOC from the article's h2 headings and track the active one.
+  // The active entry gets a yellow left tick — always visible, never needs a click.
+  const list = document.querySelector('[data-toc-list]');
+  const article = document.querySelector('.docs__body .prose');
+  if (list && article) {
+    const headings = [...article.querySelectorAll('h2[id]')];
+    if (!headings.length) { list.closest('.docs__toc').hidden = true; }
+    else {
+      list.innerHTML = headings.map(h =>
+        `<li><a href="#${h.id}" data-toc-id="${h.id}">${h.textContent.trim()}</a></li>`
+      ).join('');
+
+      const links = [...list.querySelectorAll('a')];
+      const setActive = (id) => {
+        links.forEach(a => {
+          a.dataset.active = (a.dataset.tocId === id) ? 'true' : '';
+        });
+      };
+      setActive(headings[0].id);
+
+      // Track which section is in view; rootMargin centres the viewport.
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) setActive(e.target.id);
+        }
+      }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+      headings.forEach(h => io.observe(h));
+    }
+  }
+</script>
+
+</Base>

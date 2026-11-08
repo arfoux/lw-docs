@@ -1,0 +1,73 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import Code from '../../components/Code.astro';
+import MiniFig from '../../components/MiniFig.astro';
+import { site } from '../../data/site.js';
+
+const parity = `$ npm run test:corpus
+55/55  blade cases byte-identical vs PHP 8.3.30`;
+---
+
+<Docs
+  title="Blade & parity"
+  description="Which Blade compiles, how layouts travel, and what byte-parity against the real PHP 8.3 renderer means."
+  slug="blade"
+  lead="Views are compiled, not interpreted. The reference is the real Laravel renderer running on PHP 8.3, and the comparison is bytes."
+  source={`README.md §Compiles today; MAP.md §5 §6b; COMPILED.md — repository ${site.source}`}
+>
+  <h2 id="what">What compiles</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th scope="col">Blade</th><th scope="col">verdict</th><th scope="col">note</th></tr></thead>
+      <tbody>
+        <tr><th scope="row" class="mono">@extends, @section, @yield</th><td>compiles</td><td>the sections travel to the layout, not just the child view</td></tr>
+        <tr><th scope="row" class="mono">@if, @elseif, @else, @unless</th><td>compiles</td><td></td></tr>
+        <tr><th scope="row" class="mono">@foreach, @for, @while, @forelse</th><td>compiles</td><td></td></tr>
+        <tr><th scope="row" class="mono">@switch, @match</th><td>compiles</td><td></td></tr>
+        <tr><th scope="row" class="mono">ternary, ?:, ??, ??=, isset, empty</th><td>compiles</td><td>evaluated with PHP's own rules for a missing value</td></tr>
+        <tr><th scope="row" class="mono">&#123;&#123; &#125;&#125; and &#123;!! !!&#125;</th><td>compiles</td><td>escaping matches <code>e()</code>, not a regex approximation</td></tr>
+        <tr><th scope="row" class="mono">__('key')</th><td>compiles</td><td>translations are dumped at build time from your <code>lang/</code>. Other translation helpers are not compiled yet and fail loud.</td></tr>
+        <tr><th scope="row" class="mono">@vite, @fonts</th><td>compiles</td><td>a runtime shim reads the build manifest — the hashed URLs are the real ones</td></tr>
+        <tr><th scope="row" class="mono">@php blocks</th><td>restricted</td><td>a subset; anything outside it is a build error, never a silent difference</td></tr>
+        <tr><th scope="row" class="mono">&lt;x-…&gt; components, slots</th><td class="bad-text">fails loud</td><td>they compile to a view runtime the edge does not carry → a port, or inline the partial</td></tr>
+        <tr><th scope="row" class="mono">custom directives</th><td class="txt-blocked">not compiled yet</td><td>a directive outside the documented set fails the build; inline the markup or move the work into the view</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <MiniFig name="blade-pipeline" />
+
+  <h2 id="parity">What parity means here</h2>
+  <p>
+    The build does not “look right” — it compares, in two places. The Blade corpus transpiles each
+    case through the CLI, imports the emitted module and byte-compares the rendered output against
+    an expectation file that the real Laravel app on PHP 8.3.30 produced. The shadow harness goes
+    further and diffs a whole request — status, headers and body — between the PHP app and the
+    compiled worker. The corpus is <code>55/55</code> today, and a divergence fails CI rather than
+    becoming a footnote.
+  </p>
+  <Code file="shell" code={parity} />
+  <p>
+    Two things follow from that. First, the compiled view must reproduce PHP's string and number
+    formatting, not JavaScript's — the runtime carries the PHP behaviours (<code>sprintf</code>,
+    <code>number_format</code>, <code>json_encode</code>, <code>DateTime</code>) deliberately.
+    Second, a Blade construct that cannot be reproduced has exactly one honest answer: the build
+    stops.
+  </p>
+
+  <h2 id="sharing">Sharing the layout</h2>
+  <p>
+    A layout is a view too. <code>@extends</code> with <code>@section</code>/<code>@yield</code> is
+    compiled as a function that renders the child's sections at the point the layout yields them,
+    in the same order Laravel does. Nested includes (<code>@include</code>,
+    <code>@includeIf</code>) resolve at build time; a view that does not exist is a build error, not
+    an empty string.
+  </p>
+
+  <h2 id="locally">Working locally</h2>
+  <p>
+    Blade stays Blade in development: the same files, the same artisan, the same hot reload. There
+    is no second template language and no “edge flavour” of your views. The compiled form only
+    exists inside <code>dist/</code>.
+  </p>
+</Docs>
