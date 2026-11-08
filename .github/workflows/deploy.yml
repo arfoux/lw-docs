@@ -40,7 +40,8 @@ jobs:
         run: node scripts/build-docs-reader.mjs
 
       - name: Assert reader is not empty
-        run: node -e "const h=require('fs').readFileSync('dist/docs/read/index.html','utf8'); const n=(h.match(/reader__section/g)||[]).length; if(n<13||!h.includes('Getting started')){console.error('reader broken: '+n+' sections');process.exit(3)} console.log('reader ok: '+n+' sections')"
+        run: |
+          node -e 'const h=require("fs").readFileSync("dist/docs/read/index.html","utf8"); const n=(h.match(/reader__section/g)||[]).length; if(n<13||!h.includes("Getting started")){console.error("reader broken: "+n+" sections");process.exit(3)} console.log("reader ok: "+n+" sections")'
 
       - name: Deploy to Cloudflare Workers
         run: npx wrangler deploy
