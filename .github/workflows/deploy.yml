@@ -33,11 +33,11 @@ jobs:
       - name: Build site
         run: npm run build
 
-      - name: Build combined docs reader
-        run: node scripts/build-docs-reader.mjs
-
       - name: Verify site
         run: node scripts/check-site.mjs
+
+      - name: Build combined docs reader
+        run: node scripts/build-docs-reader.mjs
 
       - name: Deploy to Cloudflare Workers
         run: npx wrangler deploy
