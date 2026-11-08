@@ -7,9 +7,6 @@
     "directory": "./dist",
     "binding": "ASSETS"
   },
-  "routes": [
-    { "pattern": "lw.nietzsc.de", "custom_domain": true }
-  ],
   "observability": {
     "enabled": false
   }
