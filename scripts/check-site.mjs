@@ -61,6 +61,35 @@ add(
   `${docRoutes.length} pages, ${navHrefs.size} entries${unlisted.length ? `, unlisted: ${unlisted.join(', ')}` : ''}${unbuilt.length ? `, unbuilt: ${unbuilt.join(', ')}` : ''}`,
 );
 
+// ------------------------------------------------------------------- body inbound
+// The sidebar links every page from every page, so "reachable" is never the
+// question; a page nothing in the prose links to is an orphan all the same. The
+// chrome is rendered by the layouts, so a page's own .astro file holds the prose
+// links and nothing else: scanning the source is what keeps this honest (stripping
+// the rendered HTML does not, because the sidebar is not inside one element).
+const pageFiles = walk(join(ROOT, 'src/pages')).filter((file) => file.endsWith('.astro'));
+const pageRouteOf = (file) => {
+  const rel = relative(join(ROOT, 'src/pages'), file).replace(/\\/g, '/').replace(/\.astro$/, '');
+  if (rel === 'index') return '/';
+  return rel.endsWith('/index') ? `/${rel.slice(0, -'index'.length)}` : `/${rel}/`;
+};
+const pageHrefs = new Map(
+  pageFiles.map((file) => [
+    pageRouteOf(file),
+    [...readFileSync(file, 'utf8').matchAll(/href=["']([^"']+)["']/g)].map((m) => m[1]),
+  ]),
+);
+const inbound = (route) => [...pageHrefs].filter(([from, hrefs]) => from !== route && hrefs.includes(route)).map(([from]) => from);
+const orphans =
+  unlisted.length || unbuilt.length
+    ? []
+    : docRoutes.filter((route) => route !== '/docs/' && inbound(route).length === 0);
+add(
+  'every documentation page is linked from the prose of another page',
+  orphans.length === 0,
+  orphans.length ? `unlinked: ${orphans.join(', ')}` : `${docRoutes.length} pages, all with a body link`,
+);
+
 // ------------------------------------------------------------------ internal links
 const brokenLinks = [];
 let linkCount = 0;

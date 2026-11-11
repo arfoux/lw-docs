@@ -2,6 +2,7 @@
 import Docs from '../../layouts/Docs.astro';
 import Code from '../../components/Code.astro';
 import MiniFig from '../../components/MiniFig.astro';
+import { ports, number } from '../../lib/report.js';
 import { site } from '../../data/site.js';
 
 const registry = `{
@@ -25,6 +26,9 @@ export default {
     return new Response('ok');
   },
 };`;
+
+// The fleet size is counted from the repository, never typed.
+const portCount = ports.length;
 ---
 
 <Docs
@@ -80,7 +84,9 @@ export default {
     <code>build --scaffold</code> writes a 501 stub for every route that needs a port, so the gap
     becomes a file you can see instead of a surprise in production. A guard port is written by
     hand: it implements <code>user(ctx)</code>, not <code>fetch</code> — see
-    <a href="/docs/auth/">auth &amp; sessions</a>.
+    <a href="/docs/auth/">auth &amp; sessions</a>. The repository ships {number(portCount)} modules
+    in exactly this shape, one per package it answers:
+    <a href="/docs/packages/">the fleet, module by module</a>.
   </p>
 
   <h2 id="guard-ports">Guard ports</h2>

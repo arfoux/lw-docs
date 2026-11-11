@@ -108,11 +108,24 @@ npx laravel-workers deploy --plan --mode 3 --d1-auto   # preview; changes nothin
   </p>
 
   <h2 id="next">Where to go next</h2>
+  <p>
+    The sections the rest of the documentation is made of. Each one states its source at the foot of
+    the page, so a claim can be taken back to the file it came from.
+  </p>
   <ul>
-    <li><a href="/docs/cli/">CLI reference</a> — every command, flag and exit code.</li>
+    <li><a href="/docs/cli/">CLI reference</a> — every command, the deploy flags, and the exit codes CI branches on.</li>
     <li><a href="/docs/routes/">Routes &amp; ports</a> — what <code>--strict</code> enforces and how a port replaces a route.</li>
-    <li><a href="/docs/limits/">Limits</a> — what does not run at the edge, and the escape hatch.</li>
-    <li><a href="/docs/compatibility/">Compatibility</a> — all 105 Laravel documentation pages, with a verdict.</li>
+    <li><a href="/docs/packages/">Packages &amp; ports</a> — every famous Laravel package with a verdict, and the port modules that ship.</li>
+    <li><a href="/docs/blade/">Blade &amp; parity</a> — which Blade compiles, and what byte-parity against PHP 8.3 means.</li>
+    <li><a href="/docs/data/">Data &amp; D1</a> — schema at build time, the query builder, Eloquent, cache and storage.</li>
+    <li><a href="/docs/auth/">Auth &amp; sessions</a> — the session guard, remember-me, CSRF, policies, throttling, guard ports.</li>
+    <li><a href="/docs/frontend/">Frontend &amp; assets</a> — Vite at build time, the verified manifest, assets on the Worker's origin.</li>
+    <li><a href="/docs/deploy/">Deploy</a> — preview with <code>--plan</code>, pick a mode, provision D1, and the guards that refuse to guess.</li>
+    <li><a href="/docs/architecture/">Architecture</a> — the S0–S6 phases, the build cache, and the tree the artifact is made of.</li>
+    <li><a href="/docs/ci/">CI &amp; verdict</a> — the three layers of the CI contract and the workflow to copy.</li>
+    <li><a href="/docs/compatibility/">Compatibility</a> — every Laravel documentation page, with a verdict.</li>
+    <li><a href="/docs/limits/">Limits</a> — what does not run at the edge, and the escape hatch when it does not.</li>
+    <li><a href="/docs/faq/">FAQ</a> — the questions that arrive before anyone reads the rest, limits attached.</li>
     <li><a href="/audit/">The audit</a> — the construct census behind the coverage claims.</li>
   </ul>
 </Docs>

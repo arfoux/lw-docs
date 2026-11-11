@@ -27,5 +27,7 @@ export const site = {
 export const paths = {
   docs: '/docs/',
   compatibility: '/docs/compatibility/',
+  routes: '/docs/routes/',
+  packages: '/docs/packages/',
   audit: '/audit/',
 };

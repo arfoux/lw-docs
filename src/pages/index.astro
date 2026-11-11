@@ -7,6 +7,7 @@ import Glyph from '../components/Glyph.astro';
 import Mark from '../components/Mark.astro';
 import Code from '../components/Code.astro';
 import Term from '../components/Term.astro';
+import { packages, ports, number } from '../lib/report.js';
 import { site, paths } from '../data/site.js';
 
 const proof = [
@@ -565,6 +566,11 @@ const verdictSample = [
                 the Workers runtime forbids. <span class="mono">--scaffold</span> writes a 501 stub
                 for every route that needs one, so the gap is a file you can see, not a surprise in
                 production.
+              </p>
+              <p class="small" style="margin: 0.6rem 0 0">
+                <a href={paths.packages}>{number(ports.length)} modules ship as worked examples</a>
+                {' '}— one per package the project answers, each with its route seam and the secret it reads.
+                {` ${number(packages.entries.length)} packages carry a verdict in all.`}
               </p>
             </div>
           </div>
