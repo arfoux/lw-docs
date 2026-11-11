@@ -146,7 +146,11 @@ const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
   </p>
   <div class="table-wrap">
     <table class="fit">
-      <caption>One row per <code>ports/packages/*.mjs</code> module. A slug with no route is a helper or a middleware port, reached another way.</caption>
+      <caption>
+        One row per <code>ports/packages/*.mjs</code> module. A slug with no route line under it is one
+        the <em>example</em> registry does not wire &mdash; 47 of the 63 are wired there, the rest are
+        helpers or middleware a route reaches indirectly.
+      </caption>
       <thead>
         <tr>
           <th scope="col">module</th>
@@ -160,7 +164,7 @@ const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
             <th scope="row">
               <span class="mono mod">{port.slug}</span>
               <span class="port-routes small muted">
-                {port.routes.length ? port.routes.join(', ') : 'middleware / helper'}
+                {port.routes.length ? port.routes.join(', ') : 'no route in the example registry'}
               </span>
             </th>
             <td class="small">
