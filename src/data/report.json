@@ -1,10 +1,10 @@
 {
- "generatedAt": "2026-11-11T11:18:57.260Z",
+ "generatedAt": "2026-11-11T11:35:27.952Z",
  "generator": "scripts/extract-lw.mjs",
  "auditedRepo": {
   "name": "arfoux/laravel-workers",
   "path": "../laravel-workers",
-  "head": "76677e5d6240cbe56d501d788281e72ccabe5bb7",
+  "head": "4a9bdac0598110eae6f30cbcb7ed6b1028ca85da",
   "dirtyFiles": 0,
   "version": "0.5.0",
   "files": [
@@ -40,8 +40,8 @@
    },
    {
     "path": "notes/PLAYBOOK.local.md",
-    "sha256": "302d0f4fca804845",
-    "bytes": 190262,
+    "sha256": "4a87b5375e8d0b7e",
+    "bytes": 194069,
     "tracked": false
    },
    {
@@ -4082,7 +4082,7 @@
    "upstream": "spatie/laravel-activitylog",
    "version": "4.x",
    "qualifier": null,
-   "summary": "Records an activity (description / properties / causer / subject / event /",
+   "summary": "Records an activity (description / properties / causer / subject / event / log_name) into the activity_log table and reads entries back",
    "routes": [
     "/activity",
     "/activity/{id}"
@@ -4090,10 +4090,10 @@
   },
   {
    "slug": "ai-sdk",
-   "upstream": "laravel/ai (the Prism SDK) chat path",
+   "upstream": "laravel/ai",
    "version": null,
-   "qualifier": null,
-   "summary": "Parity target: Laravel\\Prism's generate() / chat(), send a message",
+   "qualifier": "the Prism SDK",
+   "summary": "Parity target: Laravel\\Prism's generate() / chat(), send a message list (+ optional tool definitions) to an LLM provider over HTTPS, get a completion, and let the model call the app's tools in a loop (tool_calls -> dispatch -> feed results back -> the model finalises)",
    "routes": [
     "/ai/chat"
    ]
@@ -4108,9 +4108,9 @@
   },
   {
    "slug": "apple-signin",
-   "upstream": "laravel/socialite's Sign in with Apple provider (AppleSocialite),",
+   "upstream": "laravel/socialite's Sign in with Apple provider",
    "version": null,
-   "qualifier": null,
+   "qualifier": "AppleSocialite",
    "summary": "the CALLBACK half, handling Apple's response_mode=form_post redirect.",
    "routes": []
   },
@@ -4119,7 +4119,7 @@
    "upstream": "the Auth0 authorization-code callback",
    "version": null,
    "qualifier": null,
-   "summary": "exchanging a code for tokens",
+   "summary": "exchanging a code for tokens at the edge.",
    "routes": [
     "/auth/auth0/callback"
    ]
@@ -4129,7 +4129,7 @@
    "upstream": "bugsnag-laravel",
    "version": null,
    "qualifier": null,
-   "summary": "POST /bugsnag/notify.",
+   "summary": "bugsnag/bugsnag-laravel reports unhandled exceptions to the Bugsnag notify API. The package ships a default Bugsnag client that, over the classic (non-serverless) path, posts to: POST https://notify.bugsnag.com/events",
    "routes": [
     "/bugsnag/notify"
    ]
@@ -4159,7 +4159,7 @@
    "upstream": "spatie/laravel-csp",
    "version": null,
    "qualifier": null,
-   "summary": "CSP middleware (applies a Content-Security-Policy",
+   "summary": "CSP middleware (applies a Content-Security-Policy header to a response and exposes the per-response nonce).",
    "routes": []
   },
   {
@@ -4167,25 +4167,25 @@
    "upstream": "laravel notification Discord channel",
    "version": null,
    "qualifier": null,
-   "summary": "POST /notify/discord.",
+   "summary": "The laravel-notification-channels/discord package ships two paths, mirroring Slack's: an Incoming Webhook (POST the JSON message straight to a https://discord.com/api/webhooks/{id}/{token} URL, the secret is in the URL, no auth header) and the full Bot API (POST /api/channels/{channel.id}/messages",
    "routes": [
     "/notify/discord"
    ]
   },
   {
    "slug": "dompdf",
-   "upstream": "barryvdh/laravel-dompdf port",
+   "upstream": "barryvdh/laravel-dompdf",
    "version": null,
    "qualifier": "POST /pdf/generate",
-   "summary": "Parity target: PDF::loadHtml($html)->setPaper($size, $orientation)->output()",
+   "summary": "Parity target: PDF::loadHtml($html)->setPaper($size, $orientation)->output() (barryvdh/laravel-dompdf), the PHP bundle (Dompdf + CPDF renderer + its bundled TTF font stack) turns an HTML string into PDF bytes entirely in-process, reading local CSS/font/float/box-model semantics.",
    "routes": []
   },
   {
    "slug": "echo",
-   "upstream": "laravel/echo  broadcast-auth",
+   "upstream": "laravel/echo",
    "version": "2.6.3",
    "qualifier": null,
-   "summary": "Echo itself is a CLIENT-side JS library (browser/Node), it never touches the",
+   "summary": "Echo itself is a CLIENT-side JS library (browser/Node), it never touches the compiled PHP rung",
    "routes": []
   },
   {
@@ -4193,7 +4193,7 @@
    "upstream": "laravel notification Expo push channel",
    "version": null,
    "qualifier": null,
-   "summary": "POST /notify/expo.",
+   "summary": "The laravel-notification-channels/expo package (and Expo's own SDK) sends push via Expo's push service: POST https://exp.host/--/api/v2/push/send with a JSON body { to: [ExpoPushToken,...], title?, body?, data?, ... } and an",
    "routes": [
     "/notify/expo"
    ]
@@ -4213,7 +4213,7 @@
    "upstream": "the Firebase Admin / firebase-php-jwt verify flow",
    "version": null,
    "qualifier": null,
-   "summary": "validating a",
+   "summary": "validating a Firebase ID token at the edge.",
    "routes": [
     "/auth/firebase/verify"
    ]
@@ -4223,7 +4223,7 @@
    "upstream": "flare-laravel",
    "version": null,
    "qualifier": null,
-   "summary": "POST /flare/report.",
+   "summary": "spatie/laravel-flare reports exceptions and log messages to the Flare error-tracking SaaS. On the classic path the PHP Flare client POSTs a JSON payload to: POST https://flareapp.io/api/report",
    "routes": []
   },
   {
@@ -4257,7 +4257,7 @@
    "upstream": "spatie/laravel-glide",
    "version": null,
    "qualifier": null,
-   "summary": "Parity target: GlideImage::load('image.jpg')->setParameter('w', 200)->url()",
+   "summary": "Parity target: GlideImage::load('image.jpg')->setParameter('w', 200)->url(), a signed transform parameter set in a URL, then a server-side controller (GlideController::render) that reads those params and streams the transformed bytes",
    "routes": [
     "/img/{path}"
    ]
@@ -4272,10 +4272,10 @@
   },
   {
    "slug": "horizon-metrics",
-   "upstream": "the laravel/horizon job-metrics",
+   "upstream": "laravel/horizon",
    "version": null,
    "qualifier": null,
-   "summary": "seam.",
+   "summary": "Laravel Horizon exposes per-queue job metrics (completed / failed / pending) on a dashboard",
    "routes": []
   },
   {
@@ -4283,15 +4283,15 @@
    "upstream": "inertiajs/inertia-laravel",
    "version": null,
    "qualifier": "server adapter",
-   "summary": "the Inertia.js PAGE",
+   "summary": "the Inertia.js PAGE response, both shapes Laravel emits:",
    "routes": []
   },
   {
    "slug": "jwt-auth",
-   "upstream": "a JWT (HS256) authentication flow",
+   "upstream": "a JWT authentication flow",
    "version": null,
-   "qualifier": null,
-   "summary": "login + an authenticated-user",
+   "qualifier": "HS256",
+   "summary": "login + an authenticated-user middleware endpoint, at the edge.",
    "routes": [
     "/auth/jwt/login",
     "/auth/jwt/user"
@@ -4299,10 +4299,10 @@
   },
   {
    "slug": "laravel-socialite-callback",
-   "upstream": "laravel/socialite v5.31.0 - the CALLBACK half: verify state, exchange",
-   "version": null,
+   "upstream": "laravel/socialite",
+   "version": "5.31.0",
    "qualifier": null,
-   "summary": "the code for tokens, fetch the user, and log them in (JSON session payload).",
+   "summary": "the CALLBACK half: verify state, exchange the code for tokens, fetch the user, and log them in (JSON session payload).",
    "routes": [
     "/auth/{provider}/callback"
    ]
@@ -4312,7 +4312,7 @@
    "upstream": "laravel/socialite",
    "version": "5.31.0",
    "qualifier": null,
-   "summary": "the REDIRECT half: build the provider",
+   "summary": "the REDIRECT half: build the provider authorize URL, remember the state, and 302 the browser there.",
    "routes": [
     "/auth/{provider}/redirect"
    ]
@@ -4322,7 +4322,7 @@
    "upstream": "lemonsqueezy/laravel",
    "version": "1.9.0",
    "qualifier": null,
-   "summary": "the Lemon Squeezy webhook endpoint +",
+   "summary": "the Lemon Squeezy webhook endpoint + license-key state at the edge.",
    "routes": [
     "/lemon-squeezy/webhook"
    ]
@@ -4332,7 +4332,7 @@
    "upstream": "mcamara/laravel-localization",
    "version": null,
    "qualifier": null,
-   "summary": "the URL-locale detection + redirect",
+   "summary": "the URL-locale detection + redirect middleware (upstream: LaravelLocalization::setLocale() plus the LaravelLocalizationRedirectFilter middleware).",
    "routes": []
   },
   {
@@ -4350,7 +4350,7 @@
    "upstream": "laravel/mail Mailgun driver",
    "version": null,
    "qualifier": null,
-   "summary": "POST /notify/mailgun.",
+   "summary": "Laravel's Mailgun transport (Symfony MailgunMailer used by MAIL_MAILER= mailgun) sends via the Mailgun HTTP API: POST https://api.mailgun.net/v3/{domain}/messages with HTTP Basic auth (api:SECRET) and a multipart/form-data body carrying",
    "routes": [
     "/notify/mailgun"
    ]
@@ -4367,7 +4367,7 @@
   },
   {
    "slug": "midtrans-webhook",
-   "upstream": "midtrans/midtrans-php inbound",
+   "upstream": "midtrans/midtrans-php",
    "version": null,
    "qualifier": null,
    "summary": "notification handling (Snap/VT-Web \"HTTP notification\").",
@@ -4378,7 +4378,7 @@
    "upstream": "mollie/laravel-cashier-mollie",
    "version": "2.x",
    "qualifier": null,
-   "summary": "the Mollie webhook receiver at the",
+   "summary": "the Mollie webhook receiver at the edge",
    "routes": []
   },
   {
@@ -4386,7 +4386,7 @@
    "upstream": "spatie/laravel-multitenancy",
    "version": "4",
    "qualifier": null,
-   "summary": "multi-tenancy on the edge.",
+   "summary": "Where Laravel resolves the current tenant once per request through the FindTenant / NeedsTenant middleware (a D1 lookup that later middleware and app code reach via tenancy()->current()), this handler does the same per-request D1 lookup and returns the booted context directly",
    "routes": []
   },
   {
@@ -4394,7 +4394,7 @@
    "upstream": "laravel notification OneSignal channel",
    "version": null,
    "qualifier": null,
-   "summary": "POST /notify/onesignal.",
+   "summary": "The laravel-notification-channels/onesignal package creates notifications via OneSignal's REST API: POST https://api.onesignal.com/notifications with header Authorization: Basic <ONESIGNAL_REST_API_KEY> (the raw key is",
    "routes": [
     "/notify/onesignal"
    ]
@@ -4404,7 +4404,7 @@
    "upstream": "laravel/passport",
    "version": "13.10",
    "qualifier": null,
-   "summary": "the OAuth 2.0 authorization server",
+   "summary": "the OAuth 2.0 authorization server endpoints at the edge (RS256 access tokens).",
    "routes": [
     "/oauth/authorize",
     "/oauth/token",
@@ -4417,7 +4417,7 @@
    "upstream": "spatie/laravel-permission",
    "version": "8.5.0",
    "qualifier": null,
-   "summary": "Answers hasRole / hasPermissionTo / hasAnyRole / hasAnyPermission (direct +",
+   "summary": "Answers hasRole / hasPermissionTo / hasAnyRole / hasAnyPermission (direct + via-role) and mutates assignRole / revokeRole / givePermissionTo / revokePermissionTo, all over D1",
    "routes": [
     "/model/{modelType}/{modelKey}/has-role",
     "/model/{modelType}/{modelKey}/has-permission",
@@ -4431,17 +4431,17 @@
    "upstream": "laravel/mail Postmark driver",
    "version": null,
    "qualifier": null,
-   "summary": "POST /notify/postmark.",
+   "summary": "Laravel's Postmark transport (MAIL_MAILER=postmark, wildbit/postmark-php under the hood) sends via the Postmark HTTP API: POST https://api.postmarkapp.com/email with header X-Postmark-Server-Token: {token} and a JSON body",
    "routes": [
     "/notify/postmark"
    ]
   },
   {
    "slug": "pulse",
-   "upstream": "laravel/pulse observability",
+   "upstream": "laravel/pulse",
    "version": null,
    "qualifier": null,
-   "summary": "Laravel Pulse records \"entries\" via recorders (requests, errors, slow queries,",
+   "summary": "Laravel Pulse records \"entries\" via recorders (requests, errors, slow queries, queue, cache, ...) and renders them on a dashboard",
    "routes": [
     "/pulse",
     "/pulse/record"
@@ -4459,7 +4459,7 @@
   },
   {
    "slug": "response-cache",
-   "upstream": "full-page response cache middleware, the",
+   "upstream": "full-page response cache middleware",
    "version": null,
    "qualifier": null,
    "summary": "edge port of spatie/laravel-responsecache.",
@@ -4467,10 +4467,10 @@
   },
   {
    "slug": "reverb",
-   "upstream": "laravel/reverb  auth-half",
+   "upstream": "laravel/reverb",
    "version": "1.12.0",
    "qualifier": null,
-   "summary": "Reverb is a long-running WebSocket server (php artisan reverb:start, ReactPHP",
+   "summary": "Reverb is a long-running WebSocket server (php artisan reverb:start, ReactPHP socket on a TCP port), that half is edge-impossible and is refused",
    "routes": [
     "/broadcasting/auth"
    ]
@@ -4480,7 +4480,7 @@
    "upstream": "laravel/sanctum",
    "version": "4.3.3",
    "qualifier": null,
-   "summary": "the SPA COOKIE mode (complements the PAT",
+   "summary": "the SPA COOKIE mode (complements the PAT port in sanctum.mjs)",
    "routes": [
     "/sanctum/csrf-cookie",
     "/sanctum/spa/user",
@@ -4503,7 +4503,7 @@
   },
   {
    "slug": "scout-algolia",
-   "upstream": "laravel/scout  +",
+   "upstream": "laravel/scout",
    "version": "11.9.0",
    "qualifier": null,
    "summary": "algolia/algoliasearch-client-php (v4.51.0) search port.",
@@ -4513,7 +4513,7 @@
   },
   {
    "slug": "scout-meilisearch",
-   "upstream": "laravel/scout  +",
+   "upstream": "laravel/scout",
    "version": "11.9.0",
    "qualifier": null,
    "summary": "meilisearch/meilisearch-php (v1.x) search port.",
@@ -4528,7 +4528,7 @@
    "upstream": "spatie/laravel-site-search",
    "version": null,
    "qualifier": null,
-   "summary": "Route contract (registry.json → {\"ports\": {\"/site-search\": \"site-search\"}}):",
+   "summary": "Route contract (registry.json → {\"ports\": {\"/site-search\": \"site-search\"}}): GET /site-search?q=<term>[&index=<uid>][&limit=n] → proxies to Meilisearch POST /indexes/{uid}/search with body {q, limit} → 200 { hits: [...], query, totalHits }",
    "routes": [
     "/site-search"
    ]
@@ -4548,7 +4548,7 @@
    "upstream": "spatie/laravel-sluggable",
    "version": "4.0.6",
    "qualifier": null,
-   "summary": "Generates a unique URL slug (Str::slug of the source field) and, on",
+   "summary": "Generates a unique URL slug (Str::slug of the source field) and, on collision with an existing row, appends a numeric suffix -2, -3, … until free, the package's generateUniqueSlug loop",
    "routes": [
     "/slug"
    ]
@@ -4568,7 +4568,7 @@
    "upstream": "spatie/laravel-enum",
    "version": "3.x",
    "qualifier": null,
-   "summary": "an enum class with toArray, values,",
+   "summary": "an enum class with toArray, values, names, from, tryFrom, random",
    "routes": [
     "/enums",
     "/enums/{class}",
@@ -4582,7 +4582,7 @@
    "upstream": "spatie/laravel-model-states",
    "version": "2.14.3",
    "qualifier": null,
-   "summary": "a state field on a model backed",
+   "summary": "a state field on a model backed by a transition map",
    "routes": [
     "/state-models",
     "/state-models/{id}",
@@ -4595,7 +4595,7 @@
    "upstream": "spatie/laravel-query-builder",
    "version": "7.3.7",
    "qualifier": null,
-   "summary": "request-driven query building",
+   "summary": "request-driven query building against an allowlist",
    "routes": [
     "/posts"
    ]
@@ -4605,7 +4605,7 @@
    "upstream": "spatie/laravel-settings",
    "version": "3.10.1",
    "qualifier": null,
-   "summary": "grouped settings persisted to a",
+   "summary": "grouped settings persisted to a table",
    "routes": [
     "/settings/{group}"
    ]
@@ -4615,7 +4615,7 @@
    "upstream": "spatie/laravel-sitemap",
    "version": "8.2.0",
    "qualifier": null,
-   "summary": "build a sitemap XML from a list of",
+   "summary": "build a sitemap XML from a list of URLs (routes) each with a lastmod",
    "routes": [
     "/sitemap.xml",
     "/sitemap"
@@ -4626,7 +4626,7 @@
    "upstream": "spatie/laravel-translatable",
    "version": "6.15.0",
    "qualifier": null,
-   "summary": "per-locale translation columns",
+   "summary": "per-locale translation columns stored as JSON. In Laravel a translatable model declares which attributes are translatable; each is stored as a JSON object { \"en\": \"...\", \"nl\": \"...\" }",
    "routes": [
     "/translatable",
     "/translatable/{id}"
@@ -4637,7 +4637,7 @@
    "upstream": "spatie/laravel-tags",
    "version": "4.12.0",
    "qualifier": null,
-   "summary": "attach / detach / sync / toggle tags on a model plus per-model tag listing,",
+   "summary": "attach / detach / sync / toggle tags on a model plus per-model tag listing, all over D1",
    "routes": [
     "/model/{modelType}/{modelKey}/tags"
    ]
@@ -4647,7 +4647,7 @@
    "upstream": "laravel-notification-channels/telegram",
    "version": null,
    "qualifier": null,
-   "summary": "Telegram Notification Channel",
+   "summary": "Telegram Notification Channel (POST /notify/telegram).",
    "routes": [
     "/notify/telegram"
    ]
@@ -4657,7 +4657,7 @@
    "upstream": "twilio/sdk",
    "version": null,
    "qualifier": "laravel-notifications Twilio channel",
-   "summary": "POST /notify/twilio.",
+   "summary": "Laravel's Twilio notification channel (laravel-notification-channels/twilio backed by twilio/sdk) sends SMS by POSTing to the Twilio REST API: POST https://api.twilio.com/2010-04-01/Accounts/{SID}/Messages.json with HTTP Basic auth (SID:TOKEN) and an application/x-www-form-urlencoded",
    "routes": [
     "/notify/twilio"
    ]
@@ -4698,14 +4698,14 @@
    "upstream": "spatie/laravel-welcome-notification",
    "version": null,
    "qualifier": null,
-   "summary": "POST /welcome-notify.",
+   "summary": "The package sends a welcome notification to a freshly-registered user through whatever mail/notification driver Laravel is configured with",
    "routes": []
   },
   {
    "slug": "xendit-webhook",
-   "upstream": "the xendit/xendit-php webhook handling (payment callback) at the edge",
+   "upstream": "xendit/xendit-php webhook handling at the edge",
    "version": null,
-   "qualifier": null,
+   "qualifier": "payment callback",
    "summary": "Route seam: registry.json → \"ports\": { \"/xendit/webhook\": \"xendit-webhook\" }",
    "routes": []
   }

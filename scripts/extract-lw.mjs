@@ -503,27 +503,58 @@ const ports = readdirSync(resolve(REPO, portsDir))
   .map((file) => {
     const slug = file.slice(0, -4);
     const src = read(`${portsDir}/${file}`);
-    const comments = src
-      .split('\n')
-      .slice(0, 60)
-      .filter((l) => l.trim().startsWith('//'))
-      .map((l) => l.replace(/^\s*\/\/\s?/, '').trim())
-      .filter((l) => l.length > 1);
-    let line1 = (comments[0] ?? '').replace(/^ports\/packages\/[\w.-]+\.mjs\s*[—–-]\s*/, '');
+    const raw = src.split('\n').slice(0, 80);
+    const isComment = (l) => l.trim().startsWith('//');
+    const clean = (l) => l.replace(/^\s*\/\/\s?/, '').trim();
+    const first = raw.findIndex(isComment);
+    // The header block: the comment lines up to the first blank one. The claim
+    // sentence can wrap over several lines, so they are kept together.
+    const block = [];
+    for (let i = first; i >= 0 && i < raw.length; i += 1) {
+      if (!isComment(raw[i]) || clean(raw[i]).length < 2) break;
+      block.push(clean(raw[i]));
+    }
+    // The paragraph after the blank: the module's own description of what it
+    // does. Used when the header block states only a label.
+    const nextPara = [];
+    let k = first + block.length;
+    while (k < raw.length && (!isComment(raw[k]) || clean(raw[k]).length < 2)) k += 1;
+    for (; k < raw.length; k += 1) {
+      if (!isComment(raw[k]) || clean(raw[k]).length < 2) break;
+      nextPara.push(clean(raw[k]));
+    }
+    let line1 = (block[0] ?? '').replace(/^ports\/packages\/[\w.-]+\.mjs\s*[—–-]\s*/, '');
     let subject = line1;
     let summary = '';
-    const dash = line1.match(/^(.*?)\s+[—–]\s+(.*)$/);
-    if (dash) { subject = dash[1].trim(); summary = dash[2].trim(); }
-    else summary = (comments[1] ?? '').trim();
+    // The claim sentence is separated by an em/en dash, and by an ASCII hyphen
+    // when it is spaced (`v5.31.0 - the CALLBACK half: ...`). The lookaheads keep
+    // a hyphen inside a package name (`laravel-dompdf`) out of it.
+    const dash = line1.match(/^(.*?)\s+(?:[—–]|-(?=\s+[a-z`"'])|-(?=\s+the\b))\s+(.*)$/);
+    if (dash) {
+      subject = dash[1].trim();
+      summary = [dash[2], ...block.slice(1)].join(' ').trim();
+    } else {
+      summary = (block[1] ?? '').trim();
+    }
     subject = subject
+      .replace(/^Port of the\s+/i, 'the ')
       .replace(/^Port of\s+/i, '')
       .replace(/^Port:\s*/i, '')
-      .replace(/\.$/, '')
-      .replace(/\s+(seam|port|auth-half|half)$/i, '')
+      .replace(/[.,;]+$/, '')
       .trim();
+    // The port files tag line 1 with a shape word ("port", "seam", "auth-half",
+    // "broadcast-auth half", "chat path", "job-metrics seam") after the upstream.
+    // Those are the module's own vocabulary, not part of the name.
+    const TAG = /\s+(?:port|seam|inbound|half|auth-half|broadcast-auth|chat path|job-metrics|observability seam)$/i;
+    const stripTags = (s) => {
+      let out = s;
+      for (let i = 0; i < 3 && TAG.test(out); i += 1) out = out.replace(TAG, '').trim();
+      return out;
+    };
+    subject = stripTags(subject);
     let version = null;
     const paren = subject.match(/\((?:v)([\d][\d.\w]*)\)/i);
-    if (paren) { version = paren[1]; subject = subject.replace(paren[0], '').trim(); }
+    if (paren) { version = paren[1]; subject = subject.replace(paren[0], ' ').trim(); }
     else {
       const tail = subject.match(/\s+v([\d][\d.\w]*)$/i);
       if (tail) { version = tail[1]; subject = subject.slice(0, subject.length - tail[0].length).trim(); }
@@ -531,12 +562,30 @@ const ports = readdirSync(resolve(REPO, portsDir))
     let note = null;
     const qual = subject.match(/\s*\(([^)]*)\)\s*$/);
     if (qual) { note = plain(qual[1]); subject = subject.slice(0, subject.length - qual[0].length).trim(); }
+    subject = stripTags(plain(subject).replace(/\s{2,}/g, ' '))
+      .replace(/^\+\s*|\s*\+$/g, '')
+      .replace(/[.,;:]+$/, '')
+      .trim();
+    // `port of the laravel/horizon ...` keeps the article; drop it when what
+    // follows is an actual package name (`vendor/package`).
+    subject = subject.replace(/^the\s+(?=[\w.-]+\/)/i, '').replace(/,\s*the$/i, '').trim();
+    // A parenthetical in the middle of the line is a qualifier too
+    // (`laravel/ai (the Prism SDK) chat path` -> "the Prism SDK").
+    const mid = subject.match(/\s*\(([^)]*)\)/);
+    if (mid && !note) { note = plain(mid[1]); subject = subject.replace(mid[0], ' ').trim(); }
+    subject = subject.replace(/\s{2,}/g, ' ').replace(/[.,;:]+$/, '').trim();
+    // A header that only labels the seam ("... job-metrics seam.") leaves a
+    // fragment: fall back to the first sentence of the paragraph below it.
+    let claim = summary.replace(/\s+/g, ' ').trim();
+    if (claim.replace(/[^a-z]/gi, '').length < 24 && nextPara.length) {
+      claim = nextPara.slice(0, 4).join(' ').replace(/\s+/g, ' ');
+    }
     return {
       slug,
       upstream: plain(subject),
       version,
       qualifier: note,
-      summary: plain(summary.replace(/\s+/g, ' ').split(/(?<=[a-z0-9)`])\.\s/)[0]),
+      summary: plain(claim.split(/(?<=[a-z0-9)`])\.\s/)[0]),
       routes: portRoutes[slug] ?? [],
     };
   });
