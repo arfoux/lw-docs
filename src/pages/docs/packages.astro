@@ -1,6 +1,6 @@
 ---
 import Docs from '../../layouts/Docs.astro';
-import { packages, ports, surfaces, number } from '../../lib/report.js';
+import { packages, ports, portDoc, surfaces, number } from '../../lib/report.js';
 import { site } from '../../data/site.js';
 
 // The five verdicts are the fleet note's own words (docs/PACKAGES-RESEARCH.md).
@@ -178,6 +178,97 @@ const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
       </tbody>
     </table>
   </div>
+
+  <h2 id="seams">The route seams, in the module's words</h2>
+  <p>
+    A module's header states the port; the fleet doc states the seam it opens, and the substitution it
+    makes at that point. These {number(portDoc.seams.length)} rows are the newer ports, where the edge
+    answer is not a 1:1 transport swap and the doc says why.
+  </p>
+  <div class="table-wrap">
+    <table class="fit">
+      <thead>
+        <tr>
+          <th scope="col">module</th>
+          <th scope="col" class="seam-col">seam</th>
+          <th scope="col">the substitution, in the doc's words</th>
+        </tr>
+      </thead>
+      <tbody>
+        {portDoc.seams.map((seam) => (
+          <tr>
+            <th scope="row" class="mono mod">{seam.slug}</th>
+            <td class="small mono seam-col">
+              {seam.routes.split(', ').map((route) => (
+                <span class="seam-route">{route}</span>
+              ))}
+            </td>
+            <td class="small">{seam.note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="needs">What each port needs configured</h2>
+  <p>
+    A port that answers a route usually reads a Worker secret or a D1 binding to do it. The fleet doc
+    carries that list because a port that is wired but unconfigured fails at request time, not build time.{' '}
+    {number(portDoc.secrets.length)} rows, and the secret names are the doc's, not this page's.
+  </p>
+  <div class="table-wrap">
+    <table class="fit">
+      <thead>
+        <tr>
+          <th scope="col">module</th>
+          <th scope="col">secret or binding</th>
+        </tr>
+      </thead>
+      <tbody>
+        {portDoc.secrets.map((row) => (
+          <tr>
+            <th scope="row" class="mono mod">{row.slugs.join(', ')}</th>
+            <td class="small">{row.secret}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="collisions">Collisions, and the middleware seam</h2>
+  <p>
+    One route has more than one port able to answer it, so a registry must pick; a duplicate JSON key
+    keeps the last and fails at request time. The fleet doc's row is republished here, not paraphrased.
+  </p>
+  <div class="table-wrap">
+    <table class="fit">
+      <thead>
+        <tr>
+          <th scope="col">route path</th>
+          <th scope="col">ports that answer it</th>
+          <th scope="col">why it matters</th>
+        </tr>
+      </thead>
+      <tbody>
+        {portDoc.collisions.map((row) => (
+          <tr>
+            <th scope="row" class="mono mod">{row.path}</th>
+            <td class="mono mod">{row.slugs.join(', ')}</td>
+            <td class="small">{row.note}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  {portDoc.middleware && (
+    <p class="small">
+      A <strong>middleware port</strong> runs before the route's own handler on the same request, and may
+      continue or short-circuit it. The fleet's one is
+      {' '}<span class="mono">{portDoc.middleware.slug}</span> at
+      {' '}<span class="mono">{portDoc.middleware.route}</span>, declared under <span class="mono">middlewarePorts</span> rather than
+      {' '}<span class="mono">ports</span>. That is the template a response-cache or URL-normalising port follows.
+    </p>
+  )}
 
   <h2 id="surfaces">The Laravel APIs behind them</h2>
   <p>

@@ -590,6 +590,68 @@ const ports = readdirSync(resolve(REPO, portsDir))
     };
   });
 
+// --------------------------- what each port needs (docs/PACKAGE-PORTS.md)
+//
+// The fleet doc carries three things a module header does not: the Worker
+// secret or binding each slug reads, the route seam notes for the newer ports,
+// and the one route collision. They are read here so the page cannot drift from
+// the doc, and every slug it names is checked against the module list.
+const portsDocLines = read('docs/PACKAGE-PORTS.md').split('\n');
+const docSections = (() => {
+  const out = {};
+  let heading = null;
+  for (const line of portsDocLines) {
+    if (line.startsWith('## ')) { heading = line.slice(3).trim(); out[heading] ??= []; continue; }
+    if (!heading) continue;
+    if (!line.startsWith('|') || /^\|[\s:|-]+\|$/.test(line)) continue;
+    out[heading].push(line.replace(/^\||\|$/g, '').split('|').map((c) => c.trim()));
+  }
+  return out;
+})();
+const docSection = (needle) => {
+  const key = Object.keys(docSections).find((h) => h.includes(needle));
+  return key ? docSections[key].slice(1).map((cells) => cells.map((c) => stripBackticks(plain(c)))) : [];
+};
+// A cell like "`sanctum`, `sanctum-spa-cookie`" or "`laravel-socialite-*`".
+const docSlugs = (cell) =>
+  stripBackticks(cell)
+    .split(',')
+    .map((s) => s.replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+const portDoc = {
+  secrets: docSection('Secrets the handlers read').map(([slugs, secret]) => ({
+    slugs: docSlugs(slugs),
+    secret: secret.replace(/\s+/g, ' '),
+  })),
+  seams: docSection('Route seams').map(([slug, routes, note]) => ({
+    slug: stripBackticks(slug),
+    routes,
+    note,
+  })),
+  collisions: docSection('Collisions').map(([path, from, note]) => ({
+    path,
+    slugs: docSlugs(from),
+    note,
+  })),
+  // The doc's own example of the middleware seam:
+  // `{ "middlewarePorts": { "/localization": ["localization"] } }`.
+  middleware: (() => {
+    const line = portsDocLines.find((l) => l.includes('"middlewarePorts"'));
+    const m = line?.match(/"([^"]+)"\s*:\s*\[\s*"([^"]+)"/);
+    return m ? { route: m[1], slug: m[2] } : null;
+  })(),
+};
+// `laravel-socialite-*` stands for the modules under that prefix; expand the
+// globs so the cross-check compares real files.
+const modules = new Set(ports.map((p) => p.slug));
+const expand = (slug) => (slug.endsWith('*') ? [...modules].filter((m) => m.startsWith(slug.slice(0, -1))) : [slug]);
+const docNamed = [
+  ...portDoc.secrets.flatMap((row) => row.slugs.flatMap(expand)),
+  ...portDoc.seams.map((row) => row.slug),
+  ...portDoc.collisions.flatMap((row) => row.slugs.flatMap(expand)),
+];
+const docUnknown = [...new Set(docNamed)].filter((slug) => !modules.has(slug));
+
 // ------------------------------------------- Laravel API surfaces (kernel/*.mjs)
 
 // The kernel modules that stand in for a Laravel class or facade. The mapping is
@@ -742,6 +804,11 @@ const checks = [
     detail: `${ports.filter((p) => p.upstream && p.summary).length}/${ports.length} with both`,
   },
   {
+    name: 'every slug docs/PACKAGE-PORTS.md names is a module on disk',
+    ok: docUnknown.length === 0,
+    detail: `${portDoc.secrets.length} secret rows, ${portDoc.seams.length} seam rows, ${docUnknown.length} unknown slugs${docUnknown.length ? ` (${docUnknown.join(', ')})` : ''}`,
+  },
+  {
     name: 'every Laravel surface row points at a kernel module that exists',
     ok: surfaces.every((s) => s.items.length > 0),
     detail: `${surfaces.length} surfaces, ${surfaces.reduce((n, s) => n + s.items.length, 0)} named members`,
@@ -800,6 +867,7 @@ const report = {
   failsLoud,
   packages: { clusters: packageClusters, entries: packageEntries, totals: packageTotals },
   ports,
+  portDoc,
   surfaces,
   playbook,
   checks,

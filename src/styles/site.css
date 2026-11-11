@@ -807,6 +807,16 @@
     overflow-wrap: anywhere;
   }
 
+  /* One route per line in the seam column: a comma-separated run wrapped in the
+     middle of a path (`/bugsnag/noti` / `fy`) reads as a different path. */
+  .prose table .seam-col {
+    width: 30%;
+  }
+  .prose table .seam-route {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
   tbody tr:hover {
     background: color-mix(in oklab, var(--fg) 4%, transparent);
   }

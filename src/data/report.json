@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-11T11:35:27.952Z",
+ "generatedAt": "2026-11-11T11:41:33.497Z",
  "generator": "scripts/extract-lw.mjs",
  "auditedRepo": {
   "name": "arfoux/laravel-workers",
@@ -4710,6 +4710,310 @@
    "routes": []
   }
  ],
+ "portDoc": {
+  "secrets": [
+   {
+    "slugs": [
+     "sanctum",
+     "sanctum-spa-cookie"
+    ],
+    "secret": "APP_KEY (token cookie); D1 personal_access_tokens (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "passport-oauth"
+    ],
+    "secret": "PASSPORT_PRIVATE_KEY (RS256, WebCrypto)"
+   },
+   {
+    "slugs": [
+     "cashier-stripe"
+    ],
+    "secret": "STRIPE_WEBHOOK_SECRET"
+   },
+   {
+    "slugs": [
+     "cashier-paddle"
+    ],
+    "secret": "PADDLE_WEBHOOK_SECRET"
+   },
+   {
+    "slugs": [
+     "lemonsqueezy"
+    ],
+    "secret": "LEMON_SQUEEZY_WEBHOOK_SECRET"
+   },
+   {
+    "slugs": [
+     "scout-meilisearch"
+    ],
+    "secret": "MEILISEARCH_HOST, MEILISEARCH_KEY"
+   },
+   {
+    "slugs": [
+     "scout-algolia"
+    ],
+    "secret": "ALGOLIA_APP_ID, ALGOLIA_KEY (fallback ALGOLIA_API_KEY)"
+   },
+   {
+    "slugs": [
+     "pusher",
+     "reverb"
+    ],
+    "secret": "PUSHER_APP_ID / PUSHER_APP_KEY / PUSHER_APP_SECRET (Reverb uses its own app key/secret)"
+   },
+   {
+    "slugs": [
+     "mailgun-mail"
+    ],
+    "secret": "MAILGUN_DOMAIN, MAILGUN_SECRET"
+   },
+   {
+    "slugs": [
+     "postmark-mail"
+    ],
+    "secret": "POSTMARK_TOKEN"
+   },
+   {
+    "slugs": [
+     "slack-notification"
+    ],
+    "secret": "SLACK_WEBHOOK_URL or the bot token"
+   },
+   {
+    "slugs": [
+     "twilio-sms"
+    ],
+    "secret": "TWILIO_SID, TWILIO_TOKEN, TWILIO_FROM"
+   },
+   {
+    "slugs": [
+     "fortify-two-factor"
+    ],
+    "secret": "APP_KEY (TOTP secret encryption); D1 two_factor_* (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "laravel-socialite-*"
+    ],
+    "secret": "per-provider client id/secret (GITHUB_CLIENT_ID, ...)"
+   },
+   {
+    "slugs": [
+     "ai-sdk"
+    ],
+    "secret": "per-provider LLM key, chosen per model: OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, GROQ_API_KEY; D1 agent_conversations, agent_conversation_messages (via ensureSchema, best-effort)"
+   },
+   {
+    "slugs": [
+     "mcp"
+    ],
+    "secret": "no secret, MCP_TOOLS / MCP_PROMPTS bindings (the tool/prompt registries), optional MCP_SERVER_NAME / MCP_SERVER_VERSION / MCP_PROTOCOL_VERSION"
+   },
+   {
+    "slugs": [
+     "pulse"
+    ],
+    "secret": "no secret; D1 pulse_entries, pulse_aggregates (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "bugsnag"
+    ],
+    "secret": "BUGSNAG_API_KEY"
+   },
+   {
+    "slugs": [
+     "webhook-client"
+    ],
+    "secret": "WEBHOOK_CLIENT_SECRET (optional WEBHOOK_CLIENT_SIGNATURE_HEADER); D1 webhook_calls (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "webhook-server"
+    ],
+    "secret": "WEBHOOK_SERVER_SECRET; D1 webhook_calls (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "site-search"
+    ],
+    "secret": "MEILISEARCH_HOST (+ optional MEILISEARCH_KEY/MEILISEARCH_API_KEY), optional SITE_SEARCH_INDEX/SCOUT_INDEX"
+   },
+   {
+    "slugs": [
+     "telegram-notification"
+    ],
+    "secret": "TELEGRAM_BOT_TOKEN"
+   },
+   {
+    "slugs": [
+     "discord-notification"
+    ],
+    "secret": "DISCORD_WEBHOOK_URL (Incoming Webhook) or DISCORD_BOT_TOKEN (+ DISCORD_CHANNEL)"
+   },
+   {
+    "slugs": [
+     "expo-notification"
+    ],
+    "secret": "EXPO_ACCESS_TOKEN (optional, Bearer auth raises the rate limit)"
+   },
+   {
+    "slugs": [
+     "fcm-notification"
+    ],
+    "secret": "FCM_SERVICE_ACCOUNT_JSON (raw or base64), FCM_PROJECT_ID (optional, falls back to the service account's project_id)"
+   },
+   {
+    "slugs": [
+     "webpush-notification"
+    ],
+    "secret": "WEBPUSH_VAPID_PRIVATE_KEY, WEBPUSH_VAPID_SUBJECT (optional WEBPUSH_TTL / WEBPUSH_URGENCY); D1 webpush_subscriptions (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "onesignal-notification"
+    ],
+    "secret": "ONESIGNAL_APP_ID, ONESIGNAL_REST_API_KEY (optional ONESIGNAL_LANGUAGE)"
+   },
+   {
+    "slugs": [
+     "jwt-auth"
+    ],
+    "secret": "JWT_SECRET (HS256), optional JWT_TTL; D1 users (via ensureSchema)"
+   },
+   {
+    "slugs": [
+     "firebase-php-jwt"
+    ],
+    "secret": "FIREBASE_PROJECT_ID, optional FIREBASE_JWKS_URL"
+   },
+   {
+    "slugs": [
+     "auth0"
+    ],
+    "secret": "AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_CLIENT_SECRET, AUTH0_REDIRECT_URI (optional AUTH0_AUDIENCE)"
+   },
+   {
+    "slugs": [
+     "glide"
+    ],
+    "secret": "CF_IMAGE_RESIZING_ZONE, optional GLIDE_ORIGIN"
+   },
+   {
+    "slugs": [
+     "localization"
+    ],
+    "secret": "no secret, plain Wrangler vars LOCALES, DEFAULT_LOCALE, HIDE_DEFAULT_LOCALE_IN_URL"
+   }
+  ],
+  "seams": [
+   {
+    "slug": "ai-sdk",
+    "routes": "POST /ai/chat",
+    "note": "Non-streaming generate() only, the SSE stream is a runtime gap (no ReadableStream body contract). Tools dispatch via env.ai_tool_runners."
+   },
+   {
+    "slug": "mcp",
+    "routes": "POST /mcp",
+    "note": "JSON-RPC 2.0 (initialize / tools/list / tools/call / prompts/list). STDIO + SSE transports refused, a Worker has no child process and no stream body yet."
+   },
+   {
+    "slug": "pulse",
+    "routes": "GET /pulse, POST /pulse/record",
+    "note": "Dashboard is a JSON aggregation over pulse_entries (?range=<minutes>), not the HTML UI."
+   },
+   {
+    "slug": "bugsnag",
+    "routes": "POST /bugsnag/notify",
+    "note": "1:1 transport swap of the notify API POST."
+   },
+   {
+    "slug": "webhook-client",
+    "routes": "POST /webhooks/{name}",
+    "note": "Receiving side: HMAC-SHA256 verify (constant-time) before the D1 write; unverified calls are never stored."
+   },
+   {
+    "slug": "webhook-server",
+    "routes": "POST /webhook-server/send",
+    "note": "Sending side: signs base64(HMAC-SHA256(secret, rawBody)) + webhook-timestamp header."
+   },
+   {
+    "slug": "site-search",
+    "routes": "GET /site-search",
+    "note": "Proxies Meilisearch POST /indexes/{uid}/search; indexing is out-of-band (Searchable/Scout sync is vendor code, LW002)."
+   },
+   {
+    "slug": "telegram-notification",
+    "routes": "POST /notify/telegram",
+    "note": "Token rides in the URL path (/bot{TOKEN}/sendMessage)."
+   },
+   {
+    "slug": "discord-notification",
+    "routes": "POST /notify/discord",
+    "note": "Webhook wins over the Bot API when both are configured."
+   },
+   {
+    "slug": "expo-notification",
+    "routes": "POST /notify/expo",
+    "note": "EXPO_ACCESS_TOKEN is optional (sends unauthenticated without it)."
+   },
+   {
+    "slug": "fcm-notification",
+    "routes": "POST /notify/fcm",
+    "note": "FCM v1 HTTP API only; the deprecated legacy server-key path is not ported."
+   },
+   {
+    "slug": "webpush-notification",
+    "routes": "POST /notify/webpush, POST /webpush/subscribe",
+    "note": "RFC 8291 encrypt + RFC 8292 VAPID; subscribe stores the browser subscription in D1."
+   },
+   {
+    "slug": "onesignal-notification",
+    "routes": "POST /notify/onesignal",
+    "note": "REST API key as HTTP Basic (username, no password)."
+   },
+   {
+    "slug": "jwt-auth",
+    "routes": "POST /auth/jwt/login, GET /auth/jwt/user",
+    "note": "HS256 (the stateless tymon/jwt-auth default), not Passport's RS256; bcryptjs verifies Laravel's $2y$."
+   },
+   {
+    "slug": "firebase-php-jwt",
+    "routes": "POST /auth/firebase/verify",
+    "note": "Verifies a Firebase ID token against Google's JWKS (RS256), kid-matched."
+   },
+   {
+    "slug": "auth0",
+    "routes": "POST /auth/auth0/callback",
+    "note": "Stops at the authorization_code token exchange; compose with firebase-php-jwt for offline id_token verify."
+   },
+   {
+    "slug": "glide",
+    "routes": "GET /img/{path}",
+    "note": "Transform delegated to Cloudflare Image Resizing (/cdn-cgi/image), no GD/Imagick. w is required (422 without it)."
+   },
+   {
+    "slug": "localization",
+    "routes": "GET /localization",
+    "note": "Middleware port, not a route port: declare it under middlewarePorts. Returns null (continues to the route handler) for a prefixed or unprefixed path, setting ctx.locale on the way; the only response it produces is the HIDE_DEFAULT_LOCALE_IN_URL 302."
+   }
+  ],
+  "collisions": [
+   {
+    "path": "/broadcasting/auth",
+    "slugs": [
+     "pusher",
+     "reverb"
+    ],
+    "note": "Only one broadcast backend is installed in a real app. The example maps it to reverb and /broadcast to pusher; a Pusher-only app should move /broadcasting/auth to pusher."
+   }
+  ],
+  "middleware": {
+   "route": "/localization",
+   "slug": "localization"
+  }
+ },
  "surfaces": [
   {
    "laravel": "Illuminate\\Support\\Str",
@@ -5303,6 +5607,11 @@
    "name": "every port module states what it replaces (an upstream and a summary)",
    "ok": true,
    "detail": "63/63 with both"
+  },
+  {
+   "name": "every slug docs/PACKAGE-PORTS.md names is a module on disk",
+   "ok": true,
+   "detail": "32 secret rows, 18 seam rows, 0 unknown slugs"
   },
   {
    "name": "every Laravel surface row points at a kernel module that exists",
