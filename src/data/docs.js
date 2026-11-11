@@ -57,6 +57,11 @@ export const docs = [
     group: 'Reference',
     pages: [
       {
+        slug: 'packages',
+        title: 'Packages & ports',
+        summary: 'The famous packages with a verdict, the port modules that ship, and the Laravel APIs they replace.',
+      },
+      {
         slug: 'compatibility',
         title: 'Compatibility',
         summary: 'All 105 Laravel documentation pages, and every construct the audit covers, with a verdict.',

@@ -1,7 +1,7 @@
 import REPORT from '../data/report.json';
 
 export const report = REPORT;
-export const { headline, cpuFigures, constructs, docsPages, features, supported, failsLoud, checks, auditedRepo, playbook } = REPORT;
+export const { headline, cpuFigures, constructs, docsPages, features, supported, failsLoud, checks, auditedRepo, playbook, packages, ports, surfaces } = REPORT;
 
 export const pct = (part, whole) => (whole === 0 ? 0 : Math.round((part / whole) * 1000) / 10);
 

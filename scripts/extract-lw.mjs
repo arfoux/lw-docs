@@ -9,7 +9,7 @@
 
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 
 const args = process.argv.slice(2);
@@ -422,6 +422,175 @@ const cpuPublished = [
 ];
 const cpuMissing = cpuPublished.filter(([, needle]) => !compiledText.includes(needle));
 
+// ----------------------------------------- package fleet (docs/PACKAGES-RESEARCH.md)
+
+// The fleet note classifies every famous Laravel package the project looked at
+// into one of five verdicts: compile / port / substitute / special / refuse. The
+// site republishes the note's own cluster table and its per-package verdict
+// lines; no package is re-judged here.
+const packagesText = read('docs/PACKAGES-RESEARCH.md');
+const packageLines = packagesText.split('\n');
+
+const PACKAGE_VERDICTS = ['compile', 'port', 'substitute', 'special', 'refuse'];
+const verdictOf = (text) => {
+  const bold = PACKAGE_VERDICTS.filter((v) => new RegExp(`\\*\\*${v}\\*\\*`, 'i').test(text));
+  // A few rows name the verdicts without emphasis ("database=compile, sync=port");
+  // fall back to the bare token when nothing is bolded.
+  return bold.length ? bold : PACKAGE_VERDICTS.filter((v) => new RegExp(`\\b${v}\\b`, 'i').test(text));
+};
+
+// The cluster summary under "## Ringkasan verdict": one row per cluster, five
+// verdict columns, each cell a comma list (or the empty placeholder).
+const packageClusters = tableAfter(packageLines, /^\|\s*Kluster\s*\|\s*compile\s*\|/).map((cells) => ({
+  name: plain(cells[0]),
+  cells: Object.fromEntries(PACKAGE_VERDICTS.map((v, i) => [v, plain(cells[i + 1] ?? '')])),
+}));
+
+// Every "### <name>" entry inside a "## <cluster>" section. Some entries carry
+// the verdict inline on the heading (the observability batch), so the heading
+// text is read the same way as a "- verdict:" line.
+const packageEntries = [];
+let packageCluster = null;
+for (let i = 0; i < packageLines.length; i++) {
+  const line = packageLines[i];
+  const h2 = line.match(/^##\s+(.+)$/);
+  if (h2) {
+    packageCluster = /^(Ringkasan|Catatan|Sumber)/.test(h2[1].trim()) ? null : plain(h2[1]);
+    continue;
+  }
+  const h3 = line.match(/^###\s+(.+)$/);
+  if (!h3 || !packageCluster) continue;
+  // "### Lintas-kluster: ..." rows are cross-cutting notes about a cluster, not a
+  // package entry, so they carry no verdict and are not republished as one.
+  if (/^Lintas-kluster/i.test(h3[1].trim())) continue;
+  let verdictText = h3[1];
+  for (let j = i + 1; j < Math.min(i + 6, packageLines.length); j++) {
+    const vm = packageLines[j].match(/^\s*-\s*verdict:\s*(.+)$/);
+    if (vm) { verdictText = vm[1]; break; }
+    if (/^#{2,3}\s/.test(packageLines[j])) break;
+  }
+  const verdicts = verdictOf(verdictText);
+  const title = plain(h3[1]);
+  const vm = title.match(/^(.*?)\s+v([\d][\d.\w]*)\s*$/);
+  packageEntries.push({
+    cluster: packageCluster,
+    name: (vm ? vm[1] : title.split(/[,(]/)[0]).trim(),
+    version: vm ? vm[2] : null,
+    verdicts,
+    note: plain(verdictText).split(/(?<=[a-z0-9)`])\.\s/)[0].slice(0, 220),
+  });
+}
+
+const packageTotals = Object.fromEntries(
+  PACKAGE_VERDICTS.map((v) => [v, packageEntries.filter((e) => e.verdicts.includes(v)).length]),
+);
+
+// ------------------------------------------------ port fleet (ports/packages/*.mjs)
+
+// Each port module opens with a comment that states what it replaces and what
+// runs at the edge. The first line is the module's own statement of the port
+// ("Port of laravel/sanctum v4.3.3", "spatie/laravel-glide port"); the part after
+// the em dash is its summary. `upstream`/`version` are parsed from that line.
+const portsDir = 'ports/packages';
+// The route seam: `registry.example.json` maps a route path to a port slug. One
+// slug may answer several paths, so the reverse map is slug -> [paths].
+const registryPorts = JSON.parse(read('registry.example.json')).ports ?? {};
+const portRoutes = {};
+for (const [route, slug] of Object.entries(registryPorts)) (portRoutes[slug] ??= []).push(route);
+const ports = readdirSync(resolve(REPO, portsDir))
+  .filter((f) => f.endsWith('.mjs'))
+  .sort()
+  .map((file) => {
+    const slug = file.slice(0, -4);
+    const src = read(`${portsDir}/${file}`);
+    const comments = src
+      .split('\n')
+      .slice(0, 60)
+      .filter((l) => l.trim().startsWith('//'))
+      .map((l) => l.replace(/^\s*\/\/\s?/, '').trim())
+      .filter((l) => l.length > 1);
+    let line1 = (comments[0] ?? '').replace(/^ports\/packages\/[\w.-]+\.mjs\s*[—–-]\s*/, '');
+    let subject = line1;
+    let summary = '';
+    const dash = line1.match(/^(.*?)\s+[—–]\s+(.*)$/);
+    if (dash) { subject = dash[1].trim(); summary = dash[2].trim(); }
+    else summary = (comments[1] ?? '').trim();
+    subject = subject
+      .replace(/^Port of\s+/i, '')
+      .replace(/^Port:\s*/i, '')
+      .replace(/\.$/, '')
+      .replace(/\s+(seam|port|auth-half|half)$/i, '')
+      .trim();
+    let version = null;
+    const paren = subject.match(/\((?:v)([\d][\d.\w]*)\)/i);
+    if (paren) { version = paren[1]; subject = subject.replace(paren[0], '').trim(); }
+    else {
+      const tail = subject.match(/\s+v([\d][\d.\w]*)$/i);
+      if (tail) { version = tail[1]; subject = subject.slice(0, subject.length - tail[0].length).trim(); }
+    }
+    let note = null;
+    const qual = subject.match(/\s*\(([^)]*)\)\s*$/);
+    if (qual) { note = plain(qual[1]); subject = subject.slice(0, subject.length - qual[0].length).trim(); }
+    return {
+      slug,
+      upstream: plain(subject),
+      version,
+      qualifier: note,
+      summary: plain(summary.replace(/\s+/g, ' ').split(/(?<=[a-z0-9)`])\.\s/)[0]),
+      routes: portRoutes[slug] ?? [],
+    };
+  });
+
+// ------------------------------------------- Laravel API surfaces (kernel/*.mjs)
+
+// The kernel modules that stand in for a Laravel class or facade. The mapping is
+// the one each module's own header names; every module is asserted to exist.
+const SURFACES = [
+  ['Illuminate\\Support\\Str', 'str.mjs', 'methods'],
+  ['Illuminate\\Support\\Arr', 'arr.mjs', 'methods'],
+  ['Illuminate\\Support\\Collection', 'collections.mjs', 'class'],
+  ['Illuminate\\Database\\Eloquent\\Model', 'model.mjs', 'class'],
+  ['Illuminate\\Database\\Query\\Builder', 'db.mjs', 'class'],
+  ['Illuminate\\Session\\Store', 'session.mjs', 'class'],
+  ['Illuminate\\Validation\\Validator', 'validator.mjs', 'class'],
+  ['Illuminate\\Foundation\\Http\\FormRequest', 'form-request.mjs', 'class'],
+  ['Illuminate\\Http\\Resources\\Json\\JsonResource', 'resources.mjs', 'class'],
+  ['Illuminate\\Mail\\Mailable', 'mailable.mjs', 'class'],
+  ['Illuminate\\Cache\\DatabaseStore', 'cache.mjs', 'class'],
+  ['Illuminate\\Cache\\RateLimiter', 'ratelimit.mjs', 'class'],
+  ['Illuminate\\Routing\\Router', 'router.mjs', 'class'],
+  ['Illuminate\\Cookie', 'cookies.mjs', 'class'],
+  ['Illuminate\\Foundation\\Http\\Middleware\\PreventRequestForgery', 'csrf.mjs', 'class'],
+  ['Illuminate\\Auth\\SessionGuard', 'auth.mjs', 'class'],
+  ['Illuminate\\Pagination\\LengthAwarePaginator', 'paginator.mjs', 'class'],
+  ['Illuminate\\Encryption\\Encrypter', 'encrypter.mjs', 'class'],
+  ['Illuminate\\Hashing\\BcryptHasher', 'hash.mjs', 'class'],
+  ['Illuminate\\Console\\Scheduling\\Schedule', 'scheduler.mjs', 'class'],
+  ['Illuminate\\Queue', 'queue.mjs', 'class'],
+  ['Illuminate\\Filesystem', 'storage.mjs', 'class'],
+  ['Illuminate\\Redis', 'redis.mjs', 'class'],
+  ['Illuminate\\View\\ViewErrorBag', 'view-error-bag.mjs', 'class'],
+  ['Illuminate\\Http\\Response', 'response.mjs', 'class'],
+  ['Intervention\\Image', 'image.mjs', 'class'],
+  ['Illuminate\\Mail', 'mail.mjs', 'class'],
+  ['Illuminate\\Http\\Request', 'http.mjs', 'class'],
+];
+
+const surfaces = SURFACES.map(([laravel, module, kind]) => {
+  const src = read(`kernel/${module}`);
+  let items = [];
+  if (kind === 'methods') {
+    const sets = [...src.matchAll(/export const \w*METHODS\w* = new Set\(\[([\s\S]*?)\]\)/g)];
+    items = sets.flatMap((m) => [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]));
+  } else {
+    items = [...src.matchAll(/^export class (\w+)/gm)].map((m) => m[1]);
+    // A module without an exported class still answers a Laravel API: fall back to
+    // the functions and constants it does export (the module is the surface).
+    if (!items.length) items = [...src.matchAll(/^export (?:async )?(?:function|const) (\w+)/gm)].map((m) => m[1]);
+  }
+  return { laravel: laravel.replace(/\\\\/g, '\\'), module, kind, items: [...new Set(items)].sort((a, b) => a.localeCompare(b)) };
+});
+
 const checks = [
   {
     name: 'tools/constructs.json tallies with the README counter block',
@@ -510,6 +679,34 @@ const checks = [
     ok: playbook.scratchpadRows !== null && playbook.scratchpadRows > 0,
     detail: `scratchpad ${playbook.scratchpadRows} rows, spread ${JSON.stringify(playbook.severity)}`,
   },
+  {
+    name: 'every registry port slug has a module file, and every module is reachable from the registry',
+    ok:
+      ports.length > 0 &&
+      ports.every((p) => Object.values(registryPorts).includes(p.slug) || p.routes.length === 0) &&
+      Object.values(registryPorts).every((slug) => ports.some((p) => p.slug === slug)),
+    detail: `${ports.length} modules, ${new Set(Object.values(registryPorts)).size} slugs in registry.example.json`,
+  },
+  {
+    name: 'every port module states what it replaces (an upstream and a summary)',
+    ok: ports.every((p) => p.upstream.length > 0 && p.summary.length > 0),
+    detail: `${ports.filter((p) => p.upstream && p.summary).length}/${ports.length} with both`,
+  },
+  {
+    name: 'every Laravel surface row points at a kernel module that exists',
+    ok: surfaces.every((s) => s.items.length > 0),
+    detail: `${surfaces.length} surfaces, ${surfaces.reduce((n, s) => n + s.items.length, 0)} named members`,
+  },
+  {
+    name: 'the package fleet reads whole: every cluster row is in the source table',
+    ok: packageClusters.length > 0 && packageEntries.length > packageClusters.length,
+    detail: `${packageEntries.length} package entries across ${packageClusters.length} clusters`,
+  },
+  {
+    name: 'every package entry carries at least one verdict token',
+    ok: packageEntries.every((e) => e.verdicts.length > 0),
+    detail: `${packageEntries.filter((e) => !e.verdicts.length).length} without a verdict`,
+  },
 ];
 
 // --------------------------------------------------------------------- meta
@@ -552,6 +749,9 @@ const report = {
   features: featureRows,
   supported,
   failsLoud,
+  packages: { clusters: packageClusters, entries: packageEntries, totals: packageTotals },
+  ports,
+  surfaces,
   playbook,
   checks,
 };

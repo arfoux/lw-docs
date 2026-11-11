@@ -776,6 +776,37 @@
     min-width: 34rem;
   }
 
+  /* The API-surface list is long and its member names have no break points
+     (`AnonymousResourceCollection`), so let it break anywhere and the table fit
+     the column instead of scrolling horizontally. */
+  td.surface {
+    overflow-wrap: anywhere;
+  }
+
+  /* A table whose cells carry long identifiers (a Laravel class path, a member
+     list) is allowed to break inside a word so it fits the column rather than
+     scrolling sideways. */
+  .prose table.fit th,
+  .prose table.fit td {
+    overflow-wrap: anywhere;
+  }
+
+  /* ...but a module name or a route path stays whole: breaking `str.mjs` into two
+     lines is worse than a slightly wider column. */
+  .prose table th.mod,
+  .prose table td.mod {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+
+  /* The route seam rides under the module slug, in the same cell: the table stays
+     three columns wide and the paths stay whole. */
+  .port-routes {
+    display: block;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+
   tbody tr:hover {
     background: color-mix(in oklab, var(--fg) 4%, transparent);
   }
@@ -811,6 +842,50 @@
 
   .dot[data-klass='not-applicable'] {
     background: var(--fg-muted);
+  }
+
+  /* The package fleet's five verdicts. The three status colours are reused where
+     the meaning lines up (compile = compiles, refuse = blocked, substitute =
+     documented); a port takes the accent, and `special` is deliberately neutral
+     because it is the "it depends" bucket. */
+  .dot[data-pk='compile'] {
+    background: var(--compiles);
+  }
+
+  .dot[data-pk='port'] {
+    background: var(--accent);
+  }
+
+  .dot[data-pk='substitute'] {
+    background: var(--documented);
+  }
+
+  .dot[data-pk='special'] {
+    background: var(--fg-muted);
+  }
+
+  .dot[data-pk='refuse'] {
+    background: var(--blocked);
+  }
+
+  .v[data-k='compile'] {
+    border-inline-start-color: var(--compiles);
+  }
+
+  .v[data-k='port'] {
+    border-inline-start-color: var(--accent);
+  }
+
+  .v[data-k='substitute'] {
+    border-inline-start-color: var(--documented);
+  }
+
+  .v[data-k='special'] {
+    border-inline-start-color: var(--fg-muted);
+  }
+
+  .v[data-k='refuse'] {
+    border-inline-start-color: var(--blocked);
   }
 
   details {

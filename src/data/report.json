@@ -1,47 +1,47 @@
 {
- "generatedAt": "2026-11-08T14:14:20.584Z",
+ "generatedAt": "2026-11-11T11:18:57.260Z",
  "generator": "scripts/extract-lw.mjs",
  "auditedRepo": {
   "name": "arfoux/laravel-workers",
   "path": "../laravel-workers",
-  "head": "d881989c7b6ec2629290741f69d2cbcf7149821c",
+  "head": "76677e5d6240cbe56d501d788281e72ccabe5bb7",
   "dirtyFiles": 0,
-  "version": "0.4.11",
+  "version": "0.5.0",
   "files": [
    {
     "path": "README.md",
-    "sha256": "023522a7bd71c652",
-    "bytes": 50990,
+    "sha256": "7f98e2cb377d420f",
+    "bytes": 59521,
     "tracked": true
    },
    {
     "path": "MAP.md",
-    "sha256": "06e1e92bac03192a",
-    "bytes": 123425,
+    "sha256": "d8003e81cbc4890f",
+    "bytes": 124700,
     "tracked": true
    },
    {
     "path": "COMPILED.md",
-    "sha256": "0d0e05a55d07932f",
-    "bytes": 119990,
+    "sha256": "3f06049f1af81ba2",
+    "bytes": 122302,
     "tracked": true
    },
    {
     "path": "tools/constructs.json",
-    "sha256": "4ed57e5521b18145",
-    "bytes": 69184,
+    "sha256": "3bcaf485a64d5cea",
+    "bytes": 69630,
     "tracked": true
    },
    {
     "path": "package.json",
-    "sha256": "6af18f7d0d3c5244",
-    "bytes": 5981,
+    "sha256": "f4842ce5849f0d0e",
+    "bytes": 2672,
     "tracked": true
    },
    {
     "path": "notes/PLAYBOOK.local.md",
-    "sha256": "59631cce1b2d6f9e",
-    "bytes": 147100,
+    "sha256": "302d0f4fca804845",
+    "bytes": 190262,
     "tracked": false
    },
    {
@@ -55,15 +55,15 @@
  "headline": {
   "constructs": {
    "audited": 118,
-   "compiles": 47,
-   "failsLoud": 64,
+   "compiles": 54,
+   "failsLoud": 57,
    "documented": 7
   },
   "facades": {
    "total": 47,
    "classified": 47,
-   "compiles": 6,
-   "failsLoud": 41,
+   "compiles": 13,
+   "failsLoud": 34,
    "documented": 0,
    "source": "the vendored Illuminate/Support/Facades directory (Laravel 13) - every facade must have a row"
   },
@@ -82,8 +82,8 @@
   },
   "declared": {
    "constructs": {
-    "compiles": 47,
-    "failsLoud": 64,
+    "compiles": 54,
+    "failsLoud": 57,
     "documented": 7,
     "audited": 118
    },
@@ -446,7 +446,7 @@
    "reason": null,
    "batch": "M60",
    "status": "done",
-   "note": "A mailable is a class: the build compiles it (the dump takes the app's Mail classes, the class compiler emits the class and the kernel's Mailable base carries Laravel's fluent surface) and the mailer sends the payload Laravel sends - the recipients, the subject and the rendered view (the mailable's data goes into the view). The byte-for-byte proof is the shadow: the PHP oracle captures Laravel's MessageSent event (the from/to/cc/bcc/replyTo/subject/html/text) and the harness compares those fields with the kernel mailer's outbox - all 8 fields are identical, the log line is not compared. The methods the kernel mailer does not implement (raw, html, queue, later) fail loud."
+   "note": "A mailable is a class: the build compiles it (the dump takes the app's Mail classes, the class compiler emits the class and the kernel's Mailable base carries Laravel's fluent surface) and the mailer sends the payload Laravel sends - the recipients, the subject and the rendered view (the mailable's data goes into the view). The byte-for-byte proof is the shadow: the PHP oracle captures Laravel's MessageSent event (the from/to/cc/bcc/replyTo/subject/html/text) and the harness compares those fields with the kernel mailer's outbox - all 8 fields are identical, the log line is not compared. The four methods the edge refuses on purpose (raw, html, queue, later) fail loud at BUILD time and at request time from ONE source (ADAPTER_REFUSED, kernel/service-adapters.mjs): raw/html build the message themselves (the edge sends a compiled mailable or a payload) and queue/later need a queue consumer the Worker does not have."
   },
   {
    "id": "mail_send_view",
@@ -971,13 +971,13 @@
   {
    "id": "facade_config",
    "label": "The Config facade",
-   "use": "        \\Illuminate\\Support\\Facades\\Config::all();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        Config::get('app.name');",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the Config facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The Config facade is not compiled at the edge (Laravel 13 lists 17 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The Config facade compiles to rt.config(key, default) - a GET only (there is no set; Config::set fails loud). A missing key answers null, like Laravel."
   },
   {
    "id": "facade_context",
@@ -993,13 +993,13 @@
   {
    "id": "facade_cookie",
    "label": "The Cookie facade",
-   "use": "        \\Illuminate\\Support\\Facades\\Cookie::getQueuedCookies();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        Cookie::make('c', 'v', 60);",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the Cookie facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The Cookie facade is not compiled at the edge (Laravel 13 lists 15 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The Cookie facade compiles to rt.cookie(name, value, minutes, ...). Only make(); other methods fail loud LW002."
   },
   {
    "id": "facade_crypt",
@@ -1015,13 +1015,13 @@
   {
    "id": "facade_db",
    "label": "The DB facade",
-   "use": "        \\Illuminate\\Support\\Facades\\DB::connection();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        $rows = DB::table('users')->where('a', 1)->get();",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the DB facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The DB facade is not compiled at the edge (Laravel 13 lists 113 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The DB facade compiles: DB::table($name) -> the kernel query builder (rt.dbTable), with a fluent chain (where/orderBy/limit/...) and async terminals (get/first/count/pluck/value) that are awaited. Methods off the builder allowlist fail loud LW002. DB::connection() (a raw connection handle) is not compiled - only the table() query-builder entry is."
   },
   {
    "id": "facade_date",
@@ -1153,7 +1153,7 @@
    "reason": null,
    "batch": "M60",
    "status": "done",
-   "note": "The Mail facade is compiled: the kernel's mailer implements Laravel's PendingMail (to/cc/bcc/replyTo + send()), so the fluent form compiles. The shadow proves the payload against the real app (the MessageSent fields vs the kernel outbox - all 8 fields identical). The methods it does not implement (raw, html, queue, later) fail loud - a mail that silently lost its cc would be a wrong answer."
+   "note": "The Mail facade is compiled: the kernel's mailer implements Laravel's PendingMail (to/cc/bcc/replyTo + send()), so the fluent form compiles. The shadow proves the payload against the real app (the MessageSent fields vs the kernel outbox - all 8 fields identical). The four methods the edge refuses on purpose (raw, html, queue, later) fail loud from ONE source (ADAPTER_REFUSED, kernel/service-adapters.mjs) - for the facade and for a constructor-injected mailer alike - because raw/html build the message themselves and queue/later need a queue consumer the Worker does not have; a mail that silently lost its body, or never left, would be the wrong answer."
   },
   {
    "id": "facade_maintenancemode",
@@ -1246,13 +1246,13 @@
   {
    "id": "facade_redirect",
    "label": "The Redirect facade",
-   "use": "        \\Illuminate\\Support\\Facades\\Redirect::back();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        Redirect::to('/x');",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the Redirect facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The Redirect facade is not compiled at the edge (Laravel 13 lists 19 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The Redirect facade compiles: to/away -> rt.redirect(location[, status]); back -> rt.back(); route -> rt.redirect(rt.route(...)); intended -> the session url.intended pull."
   },
   {
    "id": "facade_redis",
@@ -1323,13 +1323,13 @@
   {
    "id": "facade_session",
    "label": "The Session facade",
-   "use": "        \\Illuminate\\Support\\Facades\\Session::shouldBlock();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        Session::get('k');",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the Session facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The Session facade is not compiled at the edge (Laravel 13 lists 70 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The Session facade has a compiled surface (rt.session(), the same Store the session() helper reads; allowlist: get/put/has/forget/pull/flash/flush/keep/reflash/increment/decrement/push/exists/missing). The probe uses a method that compiles; methods off the allowlist fail loud LW002."
   },
   {
    "id": "facade_storage",
@@ -1345,13 +1345,13 @@
   {
    "id": "facade_url",
    "label": "The URL facade",
-   "use": "        \\Illuminate\\Support\\Facades\\URL::full();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        URL::to('/home');",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the URL facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The URL facade is not compiled at the edge (Laravel 13 lists 46 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The URL facade compiles: to()/asset() -> rt.url(path); route() -> rt.route(name, ...args). Other methods fail loud LW002."
   },
   {
    "id": "facade_validator",
@@ -1367,13 +1367,13 @@
   {
    "id": "facade_view",
    "label": "The View facade",
-   "use": "        \\Illuminate\\Support\\Facades\\View::incrementRender();",
-   "verdict": "fails-loud",
-   "code": "LW002",
+   "use": "        View::make('x', ['a' => 1]);",
+   "verdict": "compiles",
+   "code": null,
    "reason": "the View facade is not compiled at the edge",
    "batch": "M49",
    "status": "done",
-   "note": "The View facade is not compiled at the edge (Laravel 13 lists 79 methods): the build refuses it with that reason - a port handler answers it."
+   "note": "The View facade compiles to rt.view(name, data). Only make(); other methods fail loud LW002."
   },
   {
    "id": "facade_vite",
@@ -2338,7 +2338,7 @@
    "laravel": "Mail",
    "edge": "HTTP providers (Resend etc.) via fetch",
    "klass": "soft",
-   "notes": "kernel/mail.mjs exists (log/noop/resend); wired (M28), the worker builds the mailer from the app config (mail.default → log/noop/resend) and hands it to the handler; the fluent Mail::to()->send() compiles (M57: a mailable is a class - the build compiles it and the kernel's Mailable base carries Laravel's fluent surface; the mailer sends the recipients, the subject and the rendered view) → the methods the kernel mailer does not implement (raw, html, queue, later) fail loud (padanan = HTTP provider; SMTP impossible, hard)",
+   "notes": "kernel/mail.mjs exists (log/noop/resend); wired (M28), the worker builds the mailer from the app config (mail.default → log/noop/resend) and hands it to the handler; the fluent Mail::to()->send() compiles (M57: a mailable is a class - the build compiles it and the kernel's Mailable base carries Laravel's fluent surface; the mailer sends the recipients, the subject and the rendered view) → the four methods the edge refuses on purpose (raw, html, queue, later) fail loud from ONE source (ADAPTER_REFUSED, kernel/service-adapters.mjs): raw/html build the message themselves and queue/later need a queue consumer the Worker does not have (padanan = HTTP provider; SMTP impossible, hard)",
    "plan": "F"
   },
   {
@@ -2434,7 +2434,7 @@
    "laravel": "Livewire / Inertia / Filament",
    "edge": "Out of v1; Inertia feasible (JSON port) phase 3; Livewire hard",
    "klass": "hard",
-   "notes": "documented, not promised",
+   "notes": "documented, not promised. A component renders through $__env->startComponent() and is a hand-written port; an app that merely has Livewire installed builds, because its page views compile to the flag-off Livewire bytes (the component-only morph guards are dropped at the dump boundary - compiler/src/livewire-markers.mjs)",
    "plan": "later"
   },
   {
@@ -2585,27 +2585,2471 @@
    "escape": "registry.json → {\"guards\": {\"<driver>\": \"<slug>\"}} + ports/<slug>.mjs exporting default { async user(ctx) { ... } }, where ctx is { request, guard, driver, config, app: { config, db, models, env, session, cookieJar } }, the app's bindings are ctx.app.env / ctx.app.db / ctx.app.models, never ctx.env; the working recipe is on the auth row below"
   }
  ],
+ "packages": {
+  "clusters": [
+   {
+    "name": "Auth & Identity",
+    "cells": {
+     "compile": "breeze, laravel/ui",
+     "port": "sanctum, socialite, jetstream, spatie-permission",
+     "substitute": "",
+     "special": "fortify",
+     "refuse": "passport"
+    }
+   },
+   {
+    "name": "Queues & Schedule",
+    "cells": {
+     "compile": "queue(database), schedule(dump)",
+     "port": "sqs, horizon-metrics, spatie-queueable-action",
+     "substitute": "queue(redis)",
+     "special": "sync-driver, batching",
+     "refuse": "horizon"
+    }
+   },
+   {
+    "name": "Realtime / WebSockets",
+    "cells": {
+     "compile": "",
+     "port": "echo, pusher-php-server",
+     "substitute": "soketi (as hub)",
+     "special": "",
+     "refuse": "reverb, beyondcode-websockets"
+    }
+   },
+   {
+    "name": "Search",
+    "cells": {
+     "compile": "",
+     "port": "scout(+meili/algolia/typesense)",
+     "substitute": "scout-database(FTS5), tntsearch",
+     "special": "",
+     "refuse": "scout-collection"
+    }
+   },
+   {
+    "name": "Media & Files",
+    "cells": {
+     "compile": "",
+     "port": "medialibrary, sitemap, tags, sluggable, activitylog, translatable, model-states",
+     "substitute": "intervention-image, flysystem",
+     "special": "",
+     "refuse": "laravel-backup"
+    }
+   },
+   {
+    "name": "Dokumen & Export",
+    "cells": {
+     "compile": "",
+     "port": "dompdf, snappy, laravel-pdf, excel",
+     "substitute": "league/csv",
+     "special": "",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Cache/Session/RL",
+    "cells": {
+     "compile": "cache(database), session(database/cookie), ratelimit(D1)",
+     "port": "laravel/lock",
+     "substitute": "cache(redis/memcached/file/dynamodb), predis, memcached",
+     "special": "",
+     "refuse": "phpredis, octane"
+    }
+   },
+   {
+    "name": "Forms/Data/Dev",
+    "cells": {
+     "compile": "",
+     "port": "laravel-data, laravel-settings, query-builder, laravel-enum",
+     "substitute": "laravel-cors",
+     "special": "",
+     "refuse": "form-builder, pest, dusk, envoy, pint, larastan, prompts, tinker"
+    }
+   },
+   {
+    "name": "Admin & Livewire",
+    "cells": {
+     "compile": "",
+     "port": "",
+     "substitute": "",
+     "special": "livewire(install-only), tallstackui",
+     "refuse": "volt, filament, filament-media-plugin"
+    }
+   },
+   {
+    "name": "Observability & Dev",
+    "cells": {
+     "compile": "",
+     "port": "sentry-laravel",
+     "substitute": "log-viewer",
+     "special": "",
+     "refuse": "debugbar, clockwork, pail, telescope, tinker, ray"
+    }
+   },
+   {
+    "name": "Billing",
+    "cells": {
+     "compile": "",
+     "port": "cashier(Stripe), cashier-paddle, lemonsqueezy",
+     "substitute": "",
+     "special": "spark",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "HTTP & Integrasi",
+    "cells": {
+     "compile": "",
+     "port": "guzzle, stripe-php",
+     "substitute": "aws-sdk-php(S3→R2)",
+     "special": "",
+     "refuse": "Http facade"
+    }
+   },
+   {
+    "name": "AI & Agent",
+    "cells": {
+     "compile": "",
+     "port": "laravel/ai, laravel/mcp, prism-php/prism, openai-php/laravel",
+     "substitute": "",
+     "special": "laravel/boost",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Frontend SPA",
+    "cells": {
+     "compile": "folio, wayfinder",
+     "port": "inertia-laravel",
+     "substitute": "",
+     "special": "prompts (dev-only)",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Observability dashboards",
+    "cells": {
+     "compile": "",
+     "port": "pulse, bugsnag-laravel",
+     "substitute": "",
+     "special": "nightwatch",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Admin panels",
+    "cells": {
+     "compile": "",
+     "port": "",
+     "substitute": "",
+     "special": "nova, orchid, backpack, moonshine, encore",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Spatie HTTP middleware",
+    "cells": {
+     "compile": "blade-comments",
+     "port": "responsecache, csp, honeypot",
+     "substitute": "route-attributes (build-time)",
+     "special": "",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Spatie webhooks",
+    "cells": {
+     "compile": "",
+     "port": "webhook-client, webhook-server",
+     "substitute": "",
+     "special": "",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Spatie misc",
+    "cells": {
+     "compile": "",
+     "port": "menu, navigation, html, options, site-search, analytics",
+     "substitute": "fractal",
+     "special": "personal-data-export",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Spatie media extras",
+    "cells": {
+     "compile": "",
+     "port": "laravel-glide",
+     "substitute": "",
+     "special": "browsershot, image-optimizer",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "2FA & security",
+    "cells": {
+     "compile": "",
+     "port": "bacon-qr (SVG)",
+     "substitute": "google2fa, one-time-passwords",
+     "special": "robthree/twofactorauth (dep)",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Notification channels",
+    "cells": {
+     "compile": "",
+     "port": "telegram, discord, expo, fcm, webpush, onesignal",
+     "substitute": "",
+     "special": "",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Auth extras",
+    "cells": {
+     "compile": "",
+     "port": "jwt-auth, firebase-php-jwt, auth0",
+     "substitute": "kreait-firebase",
+     "special": "",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Filament ecosystem",
+    "cells": {
+     "compile": "",
+     "port": "",
+     "substitute": "",
+     "special": "settings-plugin, shield, plugin-skeleton, media-plugin",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "Livewire ecosystem",
+    "cells": {
+     "compile": "",
+     "port": "",
+     "substitute": "flux, wireui",
+     "special": "livewire-alert, livewire-wizard",
+     "refuse": ""
+    }
+   },
+   {
+    "name": "SEO & URLs",
+    "cells": {
+     "compile": "",
+     "port": "seotools, googletagmanager",
+     "substitute": "eloquent-sluggable",
+     "special": "",
+     "refuse": ""
+    }
+   }
+  ],
+  "entries": [
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/sanctum",
+    "version": "4.3.3",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, token auth = lookup D1"
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/passport",
+    "version": "13.10.0",
+    "verdicts": [
+     "port",
+     "refuse"
+    ],
+    "note": "refuse (paket) / port untuk separuh HTTP. Klaim MAP.md:511 (\"OAuth endpoints compile\") usang dan bertentangan dengan tabel M68; COMPILED.md §8b kanonik."
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/socialite",
+    "version": "5.31.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, tarian OAuth = dua panggilan fetch + session: bangun redirect authorize, verifikasi state callback, tukar code→token, lalu login lewat session guard terkompilasi"
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/fortify",
+    "version": "1.41.0",
+    "verdicts": [
+     "special"
+    ],
+    "note": "special, alur berbentuk Fortify adalah controller TERKOMPILASI (klaim repo, COMPILED.md:267); paket Fortify sendiri = port/refuse."
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/jetstream",
+    "version": "5.5.3",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port (kode kit terkompilasi; paket Jetstream = refuse), seluruh yang Jetstream kirim adalah kode app: auth stack berbentuk Fortify, API-token stack = Sanctum, keduanya sudah compile/port"
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/breeze",
+    "version": "2.4.2",
+    "verdicts": [
+     "compile"
+    ],
+    "note": "compile (terdekat ke skeleton), Breeze tak mengirim runtime paket; instalasinya = route + controller + view Blade + scaffolding Inertia/Vue, semua kode app yang dikompilasi build"
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "spatie/laravel-permission",
+    "version": "8.5.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, pemeriksaan role/permission mengalir lewat pipeline terkompilasi (can: middleware + Gate terkompilasi), tapi jawaban spatie hidup di kode vendor."
+   },
+   {
+    "cluster": "Auth & Identity",
+    "name": "laravel/ui",
+    "version": "4.6.3",
+    "verdicts": [
+     "compile"
+    ],
+    "note": "compile (scaffold legacy), scaffolding Auth laravel/ui = controller pra-Breeze yang dibangun di atas trait AuthenticatesUsers/RegistersUsers"
+   },
+   {
+    "cluster": "Queues, Jobs & Schedule",
+    "name": "laravel/horizon",
+    "version": "5.50.1",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (infra/daemon + redis), MAP.md:491: \"Redis dashboard; padanan CF dashboard\"."
+   },
+   {
+    "cluster": "Queues, Jobs & Schedule",
+    "name": "queue drivers redis/sqs/database/sync",
+    "version": null,
+    "verdicts": [
+     "compile",
+     "port",
+     "substitute",
+     "special"
+    ],
+    "note": "database=compile · sync=special · redis=substitute · sqs=port."
+   },
+   {
+    "cluster": "Queues, Jobs & Schedule",
+    "name": "laravel/schedule",
+    "version": null,
+    "verdicts": [
+     "compile",
+     "port"
+    ],
+    "note": "compile (dump) + port (delivery), build dump schedule → dist/src/schedule.generated.mjs + dist/cron.json; handler scheduled() evaluasi due events via kernel/scheduler.mjs (cronMatches/dueEvents timezone-aware)."
+   },
+   {
+    "cluster": "Queues, Jobs & Schedule",
+    "name": "spatie/laravel-queueable-action",
+    "version": "2.16.2",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, action = kode app biasa; execute() inline jalan 1:1; bentuk async lewat jalur D1 lw_jobs."
+   },
+   {
+    "cluster": "Queues, Jobs & Schedule",
+    "name": "job batching + failure handling",
+    "version": null,
+    "verdicts": [
+     "special"
+    ],
+    "note": "special (parsial), retry attempts dgn backoff 0, drop setelah 3, {ran, failed}, DELETE-on-success; unknown job di-delete + dihitung failed."
+   },
+   {
+    "cluster": "Queues, Jobs & Schedule",
+    "name": "laravel/horizon metrics",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, drain melaporkan {ran, failed} + kolom attempts; port merekam sample per drain ke D1 lw_job_metrics; CF dashboard = half-live."
+   },
+   {
+    "cluster": "Realtime / WebSockets",
+    "name": "laravel/reverb",
+    "version": "1.12.0",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (paket = server WS) / port untuk endpoint auth, Broadcast::routes() mendaftarkan /broadcasting/auth sebagai route POST biasa: rung terkompilasi menjawabnya dan WebCrypto menandatangani token privat/presence dgn ap"
+   },
+   {
+    "cluster": "Realtime / WebSockets",
+    "name": "laravel/echo",
+    "version": "2.6.3",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port (client-only), Echo = klien JS browser/Node, tak pernah menyentuh PHP terkompilasi; terhubung ke hub kompatibel-Pusher lewat WSS dan POST ke authEndpoint (route auth terkompilasi)."
+   },
+   {
+    "cluster": "Realtime / WebSockets",
+    "name": "pusher/pusher-php-server",
+    "version": "7.3.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, auth token SDK (socket_id+channel_name → {key}.{HMAC-SHA256}) = HMAC murni, direproduksi WebCrypto byte-for-byte; trigger = POST HTTPS ke REST API Pusher dgn auth_signature query-string = fetch."
+   },
+   {
+    "cluster": "Realtime / WebSockets",
+    "name": "beyondcode/laravel-websockets",
+    "version": "1.14.1",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (daemon Ratchet/ReactPHP + abandoned sejak 2022)"
+   },
+   {
+    "cluster": "Realtime / WebSockets",
+    "name": "soketi @soketi/soketi",
+    "version": "1.6.1",
+    "verdicts": [
+     "substitute",
+     "refuse"
+    ],
+    "note": "refuse (sebagai dep terkompilasi) / substitute (sebagai hub), server WS protokol-Pusher berbentuk binary Node; bisa menjadi hub pengganti"
+   },
+   {
+    "cluster": "Search",
+    "name": "laravel/scout",
+    "version": "11.9.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, kontrak Searchable utuh (toSearchableArray(), where(), paginate(), filter soft-delete); sync index = observer pada save() → baris job D1 (pola M63)."
+   },
+   {
+    "cluster": "Search",
+    "name": "meilisearch/meilisearch-php v1.x",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, search = POST fetch ke /indexes/{uid}/search + PUT settings; bentuk hits/estimatedTotalHits dipertahankan 1:1."
+   },
+   {
+    "cluster": "Search",
+    "name": "algolia/algoliasearch-client-php",
+    "version": "4.51.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, search = POST fetch /1/indexes/{name}/query dgn header X-Algolia-*."
+   },
+   {
+    "cluster": "Search",
+    "name": "typesense/laravel-scout-typesense-driver + typesense-php",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, search = GET fetch /collections/{name}/documents/search; query_by/sort_by dari config."
+   },
+   {
+    "cluster": "Search",
+    "name": "laravel/scout",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, SCOUT_DRIVER=database tanpa service eksternal: D1 punya FTS5 (MAP.md \"D1 FTS fallback (padanan)\")."
+   },
+   {
+    "cluster": "Search",
+    "name": "laravel/scout",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, engine in-memory memuat SEMUA model ke memori; edge tanpa lazy collection / memori PHP (M64/M67)"
+   },
+   {
+    "cluster": "Search",
+    "name": "teamtnt/tntsearch",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, index SQLite in-process TNT → D1 FTS5"
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-medialibrary",
+    "version": "11.23.11",
+    "verdicts": [
+     "port",
+     "substitute"
+    ],
+    "note": "port (permukaan media) + substitute (conversions), unggah byte → R2/D1-blob (kernel/storage.mjs); baris media D1 (model/collection/file_name/mime/size/disk); sajikan byte via route port, byte-identical store/read."
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-backup",
+    "version": "10.3.3",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible), mysqldump/pg_dump child process + ZipArchive + job long-running; tak ada di Worker"
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-sitemap",
+    "version": "8.2.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, XML sitemap = string build dari tabel route terkompilasi + aset statis; lastmod dari model updated_at"
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-tags",
+    "version": "4.12.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, tags = pivot tags+taggables di atas Eloquent/D1 terkompilasi; belongsToMany + attach/detach/sync/toggle sudah terkompilasi (M64)."
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-sluggable",
+    "version": "4.0.6",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, slug = Str::slug (kernel str.mjs, tabel portable-ascii, #294 byte-identical) + lookup unik di D1"
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-activitylog",
+    "version": "4.x",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, log = baris D1 activity_log pada event model; observer terkompilasi menulis baris; activity()->log() port helper; causer/subject polymorphic via morph map."
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-translatable",
+    "version": "6.15.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, terjemahan = JSON di kolom model; accessor terkompilasi membaca JSON per app.locale + fallback; whereTranslationLike → json_extract(...)."
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "spatie/laravel-model-states",
+    "version": "2.14.3",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, state = nilai kolom + kelas state; custom cast class terkompilasi; build memancarkan cast state + peta transition→target yang diizinkan; penolakan melempar nama exception PHP."
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "intervention/image",
+    "version": "3.x",
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute (paketnya refuse), yang Laravel butuhkan terkompilasi: imageInfo header-only (PNG/JPEG/GIF/WebP/BMP/AVIF) menjawab dimensions() + rule image (byte-identical, tanpa decode)."
+   },
+   {
+    "cluster": "Media & Files",
+    "name": "league/flysystem v3.36.0",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, facade Storage:: terkompilasi ke kernel/storage.mjs di atas R2 (env.R2) atau D1 blob (lw_blobs); put/get/getBytes/exists/delete + URL bertanda-tangan HMAC sementara."
+   },
+   {
+    "cluster": "Dokumen & Export",
+    "name": "barryvdh/laravel-dompdf",
+    "version": "3.1.2",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, route unduhan biasa; byte PDF mengalir sebagai body ReadableStream dgn Content-Type: application/pdf (sudah di peta MIME kernel/http.mjs)."
+   },
+   {
+    "cluster": "Dokumen & Export",
+    "name": "barryvdh/laravel-snappy",
+    "version": "1.0.5",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, separuh HTTP sama; Snappy menjalankan wkhtmltopdf/wkhtmltoimage via proc_open (knplabs/knp-snappy), Worker tanpa child process/binary → render lokal edge-impossible."
+   },
+   {
+    "cluster": "Dokumen & Export",
+    "name": "spatie/laravel-pdf",
+    "version": "2.13.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, paket sudah mengirim driver berbasis fetch yang jalan native di Worker: Cloudflare driver (Browser Run API: satu fetch, tanpa Node/Chrome) dan Gotenberg driver (HTTP API)."
+   },
+   {
+    "cluster": "Dokumen & Export",
+    "name": "maatwebsite/excel",
+    "version": "4.0.6",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, penulis CSV = output string murni; data baris dari D1"
+   },
+   {
+    "cluster": "Dokumen & Export",
+    "name": "league/csv",
+    "version": "9.29.0",
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, baca/tulis CSV = teks murni; text/csv ada di peta MIME; str_getcsv PHP sudah di-port (strGetcsv di kernel/validator.mjs)."
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "predis/predis",
+    "version": "3.7.1",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible), klien RESP PHP murni di atas socket TCP; Workers tanpa raw socket"
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "phpredis",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, ekstensi C PHP; edge menjalankan JS, tanpa PHP runtime, tanpa pemuatan ekstensi"
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "memcached",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, tanpa socket + tanpa daemon; build gate menghentikan route yang membaca rt.cache() bila cache.driver !== 'database' (store berbeda = divergensi senyap)."
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "laravel/octane",
+    "version": "2.23.0",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (N/A infra), Octane mem-boot server PHP long-running (Swoole/RoadRunner/FrankenPHP); edge tanpa proses long-lived dan tanpa PHP. Tooling boot, bukan kode app"
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "cache driver redis/memcached/dynamodb/file",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute (hanya database yang jalan), database terkompilasi 1:1 ke D1 (DatabaseCacheStore, oracle-verified M18)"
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "session driver redis/database",
+    "version": null,
+    "verdicts": [
+     "compile",
+     "refuse"
+    ],
+    "note": "compile (database) / redis refuse, database → D1 via DatabaseSessionHandler (payload base64 json|serialize, last_activity, gc); cookie → CookieSessionHandler terenkripsi stateless (nol tulis D1)."
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "rate limiter backends",
+    "version": null,
+    "verdicts": [
+     "compile"
+    ],
+    "note": "compile (backend D1) / backend redis/KV refuse/pending, middleware throttle:60,1 + RateLimiter::for() terkompilasi; berjalan di store cache database D1 (M18)"
+   },
+   {
+    "cluster": "Cache, Session, Rate-Limit",
+    "name": "laravel/lock",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (API belum terkompilasi), substitute siap: cache_locks tabel + config cache.lock_table sudah di-dump (config-dump.mjs:290); port bisa mengimplementasikan acquire/release/blocked/owner"
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "spatie/laravel-data",
+    "version": "4.23.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, bentuk DTO = kode app biasa; Data::from($request) setara (validasi via validator terkompilasi, hydrate) jalan; ->toArray()/->json() native."
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "spatie/laravel-settings",
+    "version": "3.10.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, driver DB → D1 settings (group+key+json); Settings::get/set → DB::table('settings'); cache di Cache::* terkompilasi."
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "spatie/laravel-query-builder",
+    "version": "7.3.7",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, allowedFilters/allowedSorts/allowedFields → where/orderBy/select yang dijawab query builder kernel di jalur table()."
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "spatie/laravel-enum v3.x",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, helper statis ::toArray()/::values()/::names()/::random()/::from()/::tryFrom() = statis biasa yang bisa dibawa kelas enum terkompilasi."
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "kris/laravel-form-builder ~1.17",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, port komponen-form Symfony yang menyasar API Laravel 5 to 8; terakhir mendukung L5.5, mendahului L13"
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "barryvdh/laravel-cors",
+    "version": "3.0.0",
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, platform Workers menjawab preflight CORS, OPTIONS tak terkompilasi (build fail loud); header CORS per-respons dipancarkan worker (src/worker.mjs) atau Cloudflare."
+   },
+   {
+    "cluster": "Forms, Data & Dev-Tooling",
+    "name": "Dev-only (refuse, tak pernah ship): pestphp/pest v5, laravel/dusk v8.x [INFERENCE], laravel/envoy v2.x [INFERENCE], laravel/pint v1.x [INFERENCE], nunomaduro/larastan v3.14.0, laravel/prompts 0.3.25+, laravel/tinker",
+    "version": "3.0.2.",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "Dev-only (refuse, tak pernah ship): pestphp/pest v5, laravel/dusk v8.x [INFERENCE], laravel/envoy v2.x [INFERENCE], laravel/pint v1.x [INFERENCE], nunomaduro/larastan v3.14.0, laravel/prompts 0.3.25+, laravel/tinker v3.0"
+   },
+   {
+    "cluster": "Admin & Livewire",
+    "name": "livewire/livewire",
+    "version": "4.4.8",
+    "verdicts": [
+     "special"
+    ],
+    "note": "special, \"install-only\" sudah jalan: app yang sekadar memasang Livewire tetap build hijau; view route dikompilasi ke byte Livewire flag-off (compiler/src/livewire-markers.mjs membuang guard komponen ExtendBlade::isRender"
+   },
+   {
+    "cluster": "Admin & Livewire",
+    "name": "livewire/volt",
+    "version": "1.11.2",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, Volt = API fungsional di atas Livewire; tiap komponen Volt adalah komponen Livewire"
+   },
+   {
+    "cluster": "Admin & Livewire",
+    "name": "filament/filament",
+    "version": "5.11.2",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, Filament 5.x = Server-Driven UI di atas Livewire (Alpine+Tailwind); panel/resource/page/table/form/widget/notification semuanya komponen Livewire"
+   },
+   {
+    "cluster": "Admin & Livewire",
+    "name": "filament/spatie-laravel-media-library-plugin",
+    "version": "5.11.2",
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse, bergantung Filament (semua komponen Livewire → LW002/LW004) + MediaLibrary"
+   },
+   {
+    "cluster": "Admin & Livewire",
+    "name": "tallstackui/tallstackui v4.7.1",
+    "version": null,
+    "verdicts": [
+     "special"
+    ],
+    "note": "special, paket paling kompatibel di kluster: suite komponen Blade (butuh livewire ^4.3.0 untuk sebagian komponen interaktif)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "barryvdh/laravel-debugbar v4.4.5",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "barryvdh/laravel-debugbar v4.4.5, refuse (dev-only)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "itsgoingd/clockwork v5.3.5",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "itsgoingd/clockwork v5.3.5, refuse (dev-only + edge-impossible)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "laravel/pail v1.2.7",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "laravel/pail v1.2.7, refuse (dev-only + edge-impossible)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "laravel/telescope v5.27.0",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "laravel/telescope v5.27.0, refuse (dev-only)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "laravel/tinker v3.0.2",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "laravel/tinker v3.0.2, refuse (dev-only + edge-impossible)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "opcodesio/log-viewer v3.24.2",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "opcodesio/log-viewer v3.24.2, substitute (backend storage)"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "sentry/sentry-laravel v4.29.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "sentry/sentry-laravel v4.29.0, port"
+   },
+   {
+    "cluster": "Observability & Dev",
+    "name": "spatie/laravel-ray v1.43.9",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "spatie/laravel-ray v1.43.9, refuse (edge-impossible)"
+   },
+   {
+    "cluster": "HTTP & Integrasi",
+    "name": "guzzlehttp/guzzle 7.16.x",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, satu panggilan eksternal = satu fetch (native Worker); kernel sudah memakai fetchImpl || globalThis.fetch untuk mail/R2."
+   },
+   {
+    "cluster": "HTTP & Integrasi",
+    "name": "Laravel HTTP client",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (kompilasi di MAP.md baru aspirasional), facade ada di FACADE_NAMES tapi tanpa pemetaan rt.*/handler (COMPILED.md:792)"
+   },
+   {
+    "cluster": "HTTP & Integrasi",
+    "name": "stripe/stripe-php",
+    "version": "19.x",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port (sama dgn halaman billing), REST Stripe = HTTPS; verifikasi signature = WebCrypto HMAC (pola cashier-paddle)."
+   },
+   {
+    "cluster": "HTTP & Integrasi",
+    "name": "aws/aws-sdk-php v3.403.x",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, baca/tulis objek = HTTPS + SigV4 (WebCrypto HMAC-SHA256 menandatangani SigV4); R2 bicara API S3."
+   },
+   {
+    "cluster": "Billing",
+    "name": "laravel/cashier (Stripe)",
+    "version": "16.9.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, Stripe HTTPS: checkout sessions.create→redirect, verifikasi webhook, portal billing_portal.sessions.create→redirect, state subscription di D1 (termasuk kolom meter v16), semua 1:1."
+   },
+   {
+    "cluster": "Billing",
+    "name": "laravel/cashier-paddle",
+    "version": "2.8.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, Paddle Billing HTTPS: checkout + portal = fetch; webhook = Paddle-Signature HMAC; state trial/pause di D1."
+   },
+   {
+    "cluster": "Billing",
+    "name": "laravel/spark v6",
+    "version": null,
+    "verdicts": [
+     "special"
+    ],
+    "note": "special, Spark = starter-kit komersial (repo privat spark.laravel.com, butuh composer-auth + lisensi), bukan paket biasa"
+   },
+   {
+    "cluster": "Billing",
+    "name": "lemonsqueezy/laravel",
+    "version": "1.9.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, catatan: laravel/lemon-squeezy tidak ada; resmi = lemonsqueezy/laravel (github lmsqueezy/laravel)."
+   },
+   {
+    "cluster": "Spatie Tenancy & Health",
+    "name": "spatie/laravel-multitenancy",
+    "version": "4.3.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, resolusi tenant = lookup D1 per request + boot tenant context sebelum handler; sisanya mengalir lewat pipeline terkompilasi."
+   },
+   {
+    "cluster": "Spatie Tenancy & Health",
+    "name": "spatie/laravel-health",
+    "version": "1.40.6",
+    "verdicts": [
+     "compile",
+     "port"
+    ],
+    "note": "compile (routes terkompilasi) + port (check checker), endpoint Health::routes() = route GET biasa → snapshot statis / handler terkompilasi; hasil check = daftar named results yang dijawab handler port."
+   },
+   {
+    "cluster": "Spatie Tenancy & Health",
+    "name": "spatie/laravel-onboard",
+    "version": "2.6.3",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, onboarding steps = state per-user di D1; middleware onboard redirect bila belum selesai; trait GetsOnboardingSteps = kode app yang terkompilasi."
+   },
+   {
+    "cluster": "Spatie Tenancy & Health",
+    "name": "spatie/laravel-welcome-notification",
+    "version": "2.5.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, welcome mail = Mail::to($user)->send(...) lewat kernel/mail.mjs (sudah terkompilasi); tautan set-password = signed URL (kernel/packages/signedurl.mjs, pola temporarySignedRoute)."
+   },
+   {
+    "cluster": "AI & Agent",
+    "name": "laravel/ai v1.3.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, provider call = HTTPS fetch; prompt/messages = kode app terkompilasi."
+   },
+   {
+    "cluster": "AI & Agent",
+    "name": "laravel/mcp v1.1.2",
+    "version": null,
+    "verdicts": [
+     "port",
+     "refuse"
+    ],
+    "note": "port (web half); local = refuse (stdio)."
+   },
+   {
+    "cluster": "AI & Agent",
+    "name": "prism-php/prism v0.103.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, Prism::text() = HTTPS fetch; tool-use = compiled classes; conversation = D1."
+   },
+   {
+    "cluster": "AI & Agent",
+    "name": "openai-php/laravel v0.22.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, wrapper OpenAI::client() di atas openai-php/client (Guzzle→fetch)."
+   },
+   {
+    "cluster": "AI & Agent",
+    "name": "laravel/boost v2.10.4",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (dev-only), alat AI dev, require-dev, CLI + MCP stdio + symfony/process."
+   },
+   {
+    "cluster": "Frontend SPA",
+    "name": "inertiajs/inertia-laravel v3.6.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port"
+   },
+   {
+    "cluster": "Frontend SPA",
+    "name": "laravel/folio",
+    "version": "1.2.0",
+    "verdicts": [
+     "compile",
+     "port"
+    ],
+    "note": "compile (dump path→route) + port ringan (middleware per-path)."
+   },
+   {
+    "cluster": "Frontend SPA",
+    "name": "laravel/wayfinder v0.1.23",
+    "version": null,
+    "verdicts": [
+     "compile"
+    ],
+    "note": "compile (build-time generator), vendor tak pernah hidup di edge."
+   },
+   {
+    "cluster": "Observability dashboards",
+    "name": "laravel/pulse v2.x",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, dashboard = route terkompilasi + D1 table + fetch ke sumber."
+   },
+   {
+    "cluster": "Observability dashboards",
+    "name": "laravel/nightwatch",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (infra/daemon), agent terinstall di server asli, streaming telemetry ke layanan Nightwatch."
+   },
+   {
+    "cluster": "Observability dashboards",
+    "name": "bugsnag/bugsnag-laravel",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, Bugsnag::notifyException() = POST JSON ke API Bugsnag (notify.bugsnag.com)."
+   },
+   {
+    "cluster": "Admin panels",
+    "name": "laravel/nova",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible) untuk keseluruhan; sebagian kecil compile/port bila dipakai."
+   },
+   {
+    "cluster": "Spatie HTTP middleware",
+    "name": "spatie/laravel-responsecache",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, cache full-page di D1 cache_response (path+query sebagai key), serve bila tidak expired; purge pada POST/PUT/PATCH/DELETE."
+   },
+   {
+    "cluster": "Spatie HTTP middleware",
+    "name": "spatie/laravel-csp",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, bangun Content-Security-Policy header dari config dump + compiled nonce."
+   },
+   {
+    "cluster": "Spatie HTTP middleware",
+    "name": "spatie/laravel-honeypot",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, render hidden field (name/timestamp) di form + validasi POST."
+   },
+   {
+    "cluster": "Spatie HTTP middleware",
+    "name": "spatie/laravel-route-attributes",
+    "version": null,
+    "verdicts": [
+     "special"
+    ],
+    "note": "special (build-time), baca #[Route(...)]/#[Get] di controller app saat dump fase routes → route terkompilasi."
+   },
+   {
+    "cluster": "Spatie HTTP middleware",
+    "name": "spatie/laravel-blade-comments",
+    "version": null,
+    "verdicts": [
+     "compile"
+    ],
+    "note": "compile, precompiler komentar Blade {{-- --}} → hapus saat build (Blade parser sudah support {{--)."
+   },
+   {
+    "cluster": "Spatie webhooks",
+    "name": "spatie/laravel-webhook-client",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port"
+   },
+   {
+    "cluster": "Spatie webhooks",
+    "name": "spatie/laravel-webhook-server",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port"
+   },
+   {
+    "cluster": "Spatie misc A",
+    "name": "spatie/laravel-menu v4.2.2",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, builder murni PHP → HTML; ->action()/->route() 1:1 dengan URL terkompilasi; setActiveFromRequest() baca path request."
+   },
+   {
+    "cluster": "Spatie misc A",
+    "name": "spatie/laravel-navigation v1.3.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, renderless (output JSON: tree(), breadcrumbs(), current()); active dari URL."
+   },
+   {
+    "cluster": "Spatie misc A",
+    "name": "spatie/laravel-html v3.13.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, elemen immutable & deterministik; old() terkompilasi."
+   },
+   {
+    "cluster": "Spatie misc A",
+    "name": "spatie/laravel-options v1.3.0",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, transform murni → array label/value (forEnum/forArray/forModels/forStates, sort/filter/append/nullable/only/except, toArray/toJson, toValidationRule)."
+   },
+   {
+    "cluster": "Spatie misc A",
+    "name": "spatie/laravel-email",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (bukan soal edge), Packagist API p2/spatie/laravel-email.json → HTTP 404; tidak ada di daftar paket Spatie."
+   },
+   {
+    "cluster": "Spatie misc B",
+    "name": "spatie/laravel-personal-data-export",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible) [INFERENCE versi]."
+   },
+   {
+    "cluster": "Spatie misc B",
+    "name": "spatie/laravel-site-search",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, index ke meilisearch/typesense (scout sudah port) + query route."
+   },
+   {
+    "cluster": "Spatie misc B",
+    "name": "spatie/laravel-analytics",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, fetch Google Analytics Reporting API v4 (OAuth service account) → laporan."
+   },
+   {
+    "cluster": "Spatie misc B",
+    "name": "spatie/laravel-fractal",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, Fractal::collection() transformer → serialisasi JSON di compiled app (transformer = kode app)."
+   },
+   {
+    "cluster": "Spatie media extras",
+    "name": "spatie/browsershot",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible), butuh headless Chrome/Puppeteer + FS."
+   },
+   {
+    "cluster": "Spatie media extras",
+    "name": "spatie/laravel-glide",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, GlideImage::render() → URL gambar; server = route yang memproses param resize/crop."
+   },
+   {
+    "cluster": "Spatie media extras",
+    "name": "spatie/image-optimizer",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (infra), butuh binari jpegoptim/optipng/pngquant (optimizer CLI) di build/server."
+   },
+   {
+    "cluster": "2FA & security",
+    "name": "pragmarx/google2fa",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, TOTP sudah ada di kernel/packages/totp.mjs (base32, HMAC-SHA1 WebCrypto, RFC 6238/4226, ±1 window, otpauth://, recovery codes, diuji RFC test vector)."
+   },
+   {
+    "cluster": "2FA & security",
+    "name": "bacon/bacon-qr-code",
+    "version": null,
+    "verdicts": [
+     "port",
+     "refuse"
+    ],
+    "note": "port (SVG) / refuse (PNG)."
+   },
+   {
+    "cluster": "2FA & security",
+    "name": "spatie/laravel-one-time-passwords",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, OTP via totp primitif + D1 one_time_passwords (id, code, valid_until, used_at)."
+   },
+   {
+    "cluster": "2FA & security",
+    "name": "robthree/twofactorauth",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (dependency), library PHP dengan beberapa backend (Google2FA); konsumen sebaiknya pakai totp primitif."
+   },
+   {
+    "cluster": "Notification channels",
+    "name": "laravel-notification-channels/telegram",
+    "version": "8.0.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, POST JSON ke api.telegram.org/bot{TOKEN}/sendMessage (chat_id, text, parse_mode, reply_markup); transport HTTP murni."
+   },
+   {
+    "cluster": "Notification channels",
+    "name": "laravel-notification-channels/discord",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, (a) webhook URL verbatim POST {webhookUrl} JSON; (b) bot API api/v10/channels/{id}/messages + Bearer."
+   },
+   {
+    "cluster": "Notification channels",
+    "name": "laravel-notification-channels/expo",
+    "version": "2.5.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, POST exp.host/--/api/v2/push/send JSON; opsional Bearer accessToken."
+   },
+   {
+    "cluster": "Notification channels",
+    "name": "laravel-notification-channels/fcm",
+    "version": "6.2.0",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, FCM HTTP v1: JWT RS256 dari service-account JSON → OAuth2 token → fcm.googleapis.com/v1/projects/{id}/messages:send."
+   },
+   {
+    "cluster": "Notification channels",
+    "name": "laravel-notification-channels/webpush",
+    "version": "13.0.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, RFC 8291 aes128gcm (ECDH P-256 + HKDF + AES-128-GCM) + RFC 8292 VAPID ES256 → POST <endpoint>."
+   },
+   {
+    "cluster": "Notification channels",
+    "name": "laravel-notification-channels/onesignal",
+    "version": "2.8.1",
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, POST api.onesignal.com/notifications + Authorization: Basic {REST_API_KEY}."
+   },
+   {
+    "cluster": "Auth extras",
+    "name": "tymon/php-open-source-saver/jwt-auth",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, JWT (HS256/RS256) via WebCrypto (sama primitif passport)."
+   },
+   {
+    "cluster": "Auth extras",
+    "name": "firebase/php-jwt",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, JWT encode/decode (RS256/HS256) via WebCrypto."
+   },
+   {
+    "cluster": "Auth extras",
+    "name": "kreait/laravel-firebase",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, Firebase Auth/RDBMS via REST API + JWT mint (reuse kernel/packages/token.mjs)."
+   },
+   {
+    "cluster": "Auth extras",
+    "name": "auth0/auth0-php",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, universal login callback → token exchange (fetch) + JWT verify (WebCrypto)."
+   },
+   {
+    "cluster": "Filament ecosystem",
+    "name": "filament/spatie-laravel-settings-plugin",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible) untuk plugin berbasis Livewire (semua plugin Filament berjalan di atas Livewire runtime yang tak ada)."
+   },
+   {
+    "cluster": "Livewire ecosystem",
+    "name": "wireui/wireui",
+    "version": null,
+    "verdicts": [
+     "special"
+    ],
+    "note": "special, komponen Livewire; pola yang sama seperti Livewire core (dump komponen → port tulis-tangan per komponen)."
+   },
+   {
+    "cluster": "Livewire ecosystem",
+    "name": "fluxui/flux",
+    "version": null,
+    "verdicts": [
+     "special"
+    ],
+    "note": "special, Flux = Tailwind + Blade components + Livewire; komponen basic port tulis-tangan, yang Livewire-aware tak bisa."
+   },
+   {
+    "cluster": "Livewire ecosystem",
+    "name": "jantinnerezo/livewire-alert",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (dev-only/edge-impossible), terikat runtime Livewire + dispatch browser event."
+   },
+   {
+    "cluster": "Livewire ecosystem",
+    "name": "andrewdwallo/laravel-livewire-wizard",
+    "version": null,
+    "verdicts": [
+     "refuse"
+    ],
+    "note": "refuse (edge-impossible), wizard multi-step dengan Livewire state."
+   },
+   {
+    "cluster": "SEO & URLs",
+    "name": "artesaos/seotools",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, meta tags builder → string HTML dari config dump (SEO::setTitle, setDescription, openGraph)."
+   },
+   {
+    "cluster": "SEO & URLs",
+    "name": "spatie/laravel-googletagmanager",
+    "version": null,
+    "verdicts": [
+     "port"
+    ],
+    "note": "port, @gtag directive → script tag + dataLayer; consent mode."
+   },
+   {
+    "cluster": "SEO & URLs",
+    "name": "cviebrock/eloquent-sluggable",
+    "version": null,
+    "verdicts": [
+     "substitute"
+    ],
+    "note": "substitute, generasi slug sudah ada di ports/packages/sluggable.mjs (sluggable port sudah cover)."
+   }
+  ],
+  "totals": {
+   "compile": 10,
+   "port": 72,
+   "substitute": 17,
+   "special": 9,
+   "refuse": 38
+  }
+ },
+ "ports": [
+  {
+   "slug": "activitylog",
+   "upstream": "spatie/laravel-activitylog",
+   "version": "4.x",
+   "qualifier": null,
+   "summary": "Records an activity (description / properties / causer / subject / event /",
+   "routes": [
+    "/activity",
+    "/activity/{id}"
+   ]
+  },
+  {
+   "slug": "ai-sdk",
+   "upstream": "laravel/ai (the Prism SDK) chat path",
+   "version": null,
+   "qualifier": null,
+   "summary": "Parity target: Laravel\\Prism's generate() / chat(), send a message",
+   "routes": [
+    "/ai/chat"
+   ]
+  },
+  {
+   "slug": "analytics",
+   "upstream": "spatie/laravel-analytics",
+   "version": null,
+   "qualifier": null,
+   "summary": "Google Analytics 4 Data API (runReport).",
+   "routes": []
+  },
+  {
+   "slug": "apple-signin",
+   "upstream": "laravel/socialite's Sign in with Apple provider (AppleSocialite),",
+   "version": null,
+   "qualifier": null,
+   "summary": "the CALLBACK half, handling Apple's response_mode=form_post redirect.",
+   "routes": []
+  },
+  {
+   "slug": "auth0",
+   "upstream": "the Auth0 authorization-code callback",
+   "version": null,
+   "qualifier": null,
+   "summary": "exchanging a code for tokens",
+   "routes": [
+    "/auth/auth0/callback"
+   ]
+  },
+  {
+   "slug": "bugsnag",
+   "upstream": "bugsnag-laravel",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /bugsnag/notify.",
+   "routes": [
+    "/bugsnag/notify"
+   ]
+  },
+  {
+   "slug": "cashier-paddle",
+   "upstream": "laravel/cashier-paddle",
+   "version": "2.8.1",
+   "qualifier": null,
+   "summary": "the Paddle Billing webhook endpoint.",
+   "routes": [
+    "/paddle/webhook"
+   ]
+  },
+  {
+   "slug": "cashier-stripe",
+   "upstream": "laravel/cashier",
+   "version": "16.9.0",
+   "qualifier": "Stripe",
+   "summary": "the Stripe webhook endpoint at the edge.",
+   "routes": [
+    "/stripe/webhook"
+   ]
+  },
+  {
+   "slug": "csp-middleware",
+   "upstream": "spatie/laravel-csp",
+   "version": null,
+   "qualifier": null,
+   "summary": "CSP middleware (applies a Content-Security-Policy",
+   "routes": []
+  },
+  {
+   "slug": "discord-notification",
+   "upstream": "laravel notification Discord channel",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /notify/discord.",
+   "routes": [
+    "/notify/discord"
+   ]
+  },
+  {
+   "slug": "dompdf",
+   "upstream": "barryvdh/laravel-dompdf port",
+   "version": null,
+   "qualifier": "POST /pdf/generate",
+   "summary": "Parity target: PDF::loadHtml($html)->setPaper($size, $orientation)->output()",
+   "routes": []
+  },
+  {
+   "slug": "echo",
+   "upstream": "laravel/echo  broadcast-auth",
+   "version": "2.6.3",
+   "qualifier": null,
+   "summary": "Echo itself is a CLIENT-side JS library (browser/Node), it never touches the",
+   "routes": []
+  },
+  {
+   "slug": "expo-notification",
+   "upstream": "laravel notification Expo push channel",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /notify/expo.",
+   "routes": [
+    "/notify/expo"
+   ]
+  },
+  {
+   "slug": "fcm-notification",
+   "upstream": "kreait/laravel-firebase",
+   "version": null,
+   "qualifier": null,
+   "summary": "FCM v1 HTTP API notification channel.",
+   "routes": [
+    "/notify/fcm"
+   ]
+  },
+  {
+   "slug": "firebase-php-jwt",
+   "upstream": "the Firebase Admin / firebase-php-jwt verify flow",
+   "version": null,
+   "qualifier": null,
+   "summary": "validating a",
+   "routes": [
+    "/auth/firebase/verify"
+   ]
+  },
+  {
+   "slug": "flare",
+   "upstream": "flare-laravel",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /flare/report.",
+   "routes": []
+  },
+  {
+   "slug": "fortify-confirmation",
+   "upstream": "laravel/fortify",
+   "version": "1.41",
+   "qualifier": null,
+   "summary": "password confirmation + email verification.",
+   "routes": [
+    "/user/confirm-password",
+    "/user/confirm-password/status",
+    "/email/verification-notification",
+    "/email/verify/{id}/{hash}"
+   ]
+  },
+  {
+   "slug": "fortify-two-factor",
+   "upstream": "laravel/fortify",
+   "version": "1.41",
+   "qualifier": null,
+   "summary": "two-factor (TOTP) endpoints at the edge.",
+   "routes": [
+    "/user/two-factor-authentication",
+    "/user/two-factor-authentication/confirm",
+    "/user/two-factor-challenge",
+    "/user/two-factor-challenge/recovery"
+   ]
+  },
+  {
+   "slug": "glide",
+   "upstream": "spatie/laravel-glide",
+   "version": null,
+   "qualifier": null,
+   "summary": "Parity target: GlideImage::load('image.jpg')->setParameter('w', 200)->url()",
+   "routes": [
+    "/img/{path}"
+   ]
+  },
+  {
+   "slug": "honeypot-middleware",
+   "upstream": "spatie/laravel-honeypot",
+   "version": null,
+   "qualifier": null,
+   "summary": "Honeypot form-protection middleware (POST).",
+   "routes": []
+  },
+  {
+   "slug": "horizon-metrics",
+   "upstream": "the laravel/horizon job-metrics",
+   "version": null,
+   "qualifier": null,
+   "summary": "seam.",
+   "routes": []
+  },
+  {
+   "slug": "inertia",
+   "upstream": "inertiajs/inertia-laravel",
+   "version": null,
+   "qualifier": "server adapter",
+   "summary": "the Inertia.js PAGE",
+   "routes": []
+  },
+  {
+   "slug": "jwt-auth",
+   "upstream": "a JWT (HS256) authentication flow",
+   "version": null,
+   "qualifier": null,
+   "summary": "login + an authenticated-user",
+   "routes": [
+    "/auth/jwt/login",
+    "/auth/jwt/user"
+   ]
+  },
+  {
+   "slug": "laravel-socialite-callback",
+   "upstream": "laravel/socialite v5.31.0 - the CALLBACK half: verify state, exchange",
+   "version": null,
+   "qualifier": null,
+   "summary": "the code for tokens, fetch the user, and log them in (JSON session payload).",
+   "routes": [
+    "/auth/{provider}/callback"
+   ]
+  },
+  {
+   "slug": "laravel-socialite-redirect",
+   "upstream": "laravel/socialite",
+   "version": "5.31.0",
+   "qualifier": null,
+   "summary": "the REDIRECT half: build the provider",
+   "routes": [
+    "/auth/{provider}/redirect"
+   ]
+  },
+  {
+   "slug": "lemonsqueezy",
+   "upstream": "lemonsqueezy/laravel",
+   "version": "1.9.0",
+   "qualifier": null,
+   "summary": "the Lemon Squeezy webhook endpoint +",
+   "routes": [
+    "/lemon-squeezy/webhook"
+   ]
+  },
+  {
+   "slug": "localization",
+   "upstream": "mcamara/laravel-localization",
+   "version": null,
+   "qualifier": null,
+   "summary": "the URL-locale detection + redirect",
+   "routes": []
+  },
+  {
+   "slug": "maatwebsite-excel",
+   "upstream": "maatwebsite/excel",
+   "version": "4.0.6",
+   "qualifier": null,
+   "summary": "CSV export from a D1 table",
+   "routes": [
+    "/export"
+   ]
+  },
+  {
+   "slug": "mailgun-mail",
+   "upstream": "laravel/mail Mailgun driver",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /notify/mailgun.",
+   "routes": [
+    "/notify/mailgun"
+   ]
+  },
+  {
+   "slug": "mcp",
+   "upstream": "laravel/mcp",
+   "version": null,
+   "qualifier": null,
+   "summary": "the WEB half, POST /mcp speaking MCP's JSON-RPC 2.0.",
+   "routes": [
+    "/mcp"
+   ]
+  },
+  {
+   "slug": "midtrans-webhook",
+   "upstream": "midtrans/midtrans-php inbound",
+   "version": null,
+   "qualifier": null,
+   "summary": "notification handling (Snap/VT-Web \"HTTP notification\").",
+   "routes": []
+  },
+  {
+   "slug": "mollie-webhook",
+   "upstream": "mollie/laravel-cashier-mollie",
+   "version": "2.x",
+   "qualifier": null,
+   "summary": "the Mollie webhook receiver at the",
+   "routes": []
+  },
+  {
+   "slug": "multitenancy",
+   "upstream": "spatie/laravel-multitenancy",
+   "version": "4",
+   "qualifier": null,
+   "summary": "multi-tenancy on the edge.",
+   "routes": []
+  },
+  {
+   "slug": "onesignal-notification",
+   "upstream": "laravel notification OneSignal channel",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /notify/onesignal.",
+   "routes": [
+    "/notify/onesignal"
+   ]
+  },
+  {
+   "slug": "passport-oauth",
+   "upstream": "laravel/passport",
+   "version": "13.10",
+   "qualifier": null,
+   "summary": "the OAuth 2.0 authorization server",
+   "routes": [
+    "/oauth/authorize",
+    "/oauth/token",
+    "/oauth/refresh",
+    "/oauth/jwks"
+   ]
+  },
+  {
+   "slug": "permission",
+   "upstream": "spatie/laravel-permission",
+   "version": "8.5.0",
+   "qualifier": null,
+   "summary": "Answers hasRole / hasPermissionTo / hasAnyRole / hasAnyPermission (direct +",
+   "routes": [
+    "/model/{modelType}/{modelKey}/has-role",
+    "/model/{modelType}/{modelKey}/has-permission",
+    "/model/{modelType}/{modelKey}/has-any",
+    "/model/{modelType}/{modelKey}/roles/{action}",
+    "/model/{modelType}/{modelKey}/permissions/{action}"
+   ]
+  },
+  {
+   "slug": "postmark-mail",
+   "upstream": "laravel/mail Postmark driver",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /notify/postmark.",
+   "routes": [
+    "/notify/postmark"
+   ]
+  },
+  {
+   "slug": "pulse",
+   "upstream": "laravel/pulse observability",
+   "version": null,
+   "qualifier": null,
+   "summary": "Laravel Pulse records \"entries\" via recorders (requests, errors, slow queries,",
+   "routes": [
+    "/pulse",
+    "/pulse/record"
+   ]
+  },
+  {
+   "slug": "pusher",
+   "upstream": "pusher/pusher-php-server",
+   "version": "7.3.0",
+   "qualifier": null,
+   "summary": "Two halves of the SDK, both reproducible on the edge:",
+   "routes": [
+    "/broadcast"
+   ]
+  },
+  {
+   "slug": "response-cache",
+   "upstream": "full-page response cache middleware, the",
+   "version": null,
+   "qualifier": null,
+   "summary": "edge port of spatie/laravel-responsecache.",
+   "routes": []
+  },
+  {
+   "slug": "reverb",
+   "upstream": "laravel/reverb  auth-half",
+   "version": "1.12.0",
+   "qualifier": null,
+   "summary": "Reverb is a long-running WebSocket server (php artisan reverb:start, ReactPHP",
+   "routes": [
+    "/broadcasting/auth"
+   ]
+  },
+  {
+   "slug": "sanctum-spa-cookie",
+   "upstream": "laravel/sanctum",
+   "version": "4.3.3",
+   "qualifier": null,
+   "summary": "the SPA COOKIE mode (complements the PAT",
+   "routes": [
+    "/sanctum/csrf-cookie",
+    "/sanctum/spa/user",
+    "/sanctum/spa/login",
+    "/sanctum/spa/logout"
+   ]
+  },
+  {
+   "slug": "sanctum",
+   "upstream": "laravel/sanctum",
+   "version": "4.3.3",
+   "qualifier": null,
+   "summary": "personal-access-token endpoints at the edge.",
+   "routes": [
+    "/sanctum/token",
+    "/sanctum/verify",
+    "/sanctum/tokens",
+    "/sanctum/tokens/{id}"
+   ]
+  },
+  {
+   "slug": "scout-algolia",
+   "upstream": "laravel/scout  +",
+   "version": "11.9.0",
+   "qualifier": null,
+   "summary": "algolia/algoliasearch-client-php (v4.51.0) search port.",
+   "routes": [
+    "/1/indexes/{name}/query"
+   ]
+  },
+  {
+   "slug": "scout-meilisearch",
+   "upstream": "laravel/scout  +",
+   "version": "11.9.0",
+   "qualifier": null,
+   "summary": "meilisearch/meilisearch-php (v1.x) search port.",
+   "routes": [
+    "/search",
+    "/indexes/{uid}/search",
+    "/indexes/{uid}/settings"
+   ]
+  },
+  {
+   "slug": "site-search",
+   "upstream": "spatie/laravel-site-search",
+   "version": null,
+   "qualifier": null,
+   "summary": "Route contract (registry.json → {\"ports\": {\"/site-search\": \"site-search\"}}):",
+   "routes": [
+    "/site-search"
+   ]
+  },
+  {
+   "slug": "slack-notification",
+   "upstream": "laravel/slack",
+   "version": null,
+   "qualifier": null,
+   "summary": "Slack Notification Channel (POST /notify/slack).",
+   "routes": [
+    "/notify/slack"
+   ]
+  },
+  {
+   "slug": "sluggable",
+   "upstream": "spatie/laravel-sluggable",
+   "version": "4.0.6",
+   "qualifier": null,
+   "summary": "Generates a unique URL slug (Str::slug of the source field) and, on",
+   "routes": [
+    "/slug"
+   ]
+  },
+  {
+   "slug": "spatie-data",
+   "upstream": "spatie/laravel-data",
+   "version": "4.23.1",
+   "qualifier": null,
+   "summary": "DTO creation from a validated payload.",
+   "routes": [
+    "/data"
+   ]
+  },
+  {
+   "slug": "spatie-enum",
+   "upstream": "spatie/laravel-enum",
+   "version": "3.x",
+   "qualifier": null,
+   "summary": "an enum class with toArray, values,",
+   "routes": [
+    "/enums",
+    "/enums/{class}",
+    "/enums/{class}/from",
+    "/enums/{class}/tryFrom",
+    "/enums/{class}/random"
+   ]
+  },
+  {
+   "slug": "spatie-model-states",
+   "upstream": "spatie/laravel-model-states",
+   "version": "2.14.3",
+   "qualifier": null,
+   "summary": "a state field on a model backed",
+   "routes": [
+    "/state-models",
+    "/state-models/{id}",
+    "/state-models/{id}/transition",
+    "/state-models/{id}/transitions"
+   ]
+  },
+  {
+   "slug": "spatie-query-builder",
+   "upstream": "spatie/laravel-query-builder",
+   "version": "7.3.7",
+   "qualifier": null,
+   "summary": "request-driven query building",
+   "routes": [
+    "/posts"
+   ]
+  },
+  {
+   "slug": "spatie-settings",
+   "upstream": "spatie/laravel-settings",
+   "version": "3.10.1",
+   "qualifier": null,
+   "summary": "grouped settings persisted to a",
+   "routes": [
+    "/settings/{group}"
+   ]
+  },
+  {
+   "slug": "spatie-sitemap",
+   "upstream": "spatie/laravel-sitemap",
+   "version": "8.2.0",
+   "qualifier": null,
+   "summary": "build a sitemap XML from a list of",
+   "routes": [
+    "/sitemap.xml",
+    "/sitemap"
+   ]
+  },
+  {
+   "slug": "spatie-translatable",
+   "upstream": "spatie/laravel-translatable",
+   "version": "6.15.0",
+   "qualifier": null,
+   "summary": "per-locale translation columns",
+   "routes": [
+    "/translatable",
+    "/translatable/{id}"
+   ]
+  },
+  {
+   "slug": "tags",
+   "upstream": "spatie/laravel-tags",
+   "version": "4.12.0",
+   "qualifier": null,
+   "summary": "attach / detach / sync / toggle tags on a model plus per-model tag listing,",
+   "routes": [
+    "/model/{modelType}/{modelKey}/tags"
+   ]
+  },
+  {
+   "slug": "telegram-notification",
+   "upstream": "laravel-notification-channels/telegram",
+   "version": null,
+   "qualifier": null,
+   "summary": "Telegram Notification Channel",
+   "routes": [
+    "/notify/telegram"
+   ]
+  },
+  {
+   "slug": "twilio-sms",
+   "upstream": "twilio/sdk",
+   "version": null,
+   "qualifier": "laravel-notifications Twilio channel",
+   "summary": "POST /notify/twilio.",
+   "routes": [
+    "/notify/twilio"
+   ]
+  },
+  {
+   "slug": "webhook-client",
+   "upstream": "spatie/laravel-webhook-client",
+   "version": null,
+   "qualifier": null,
+   "summary": "the receiving webhook endpoint at the edge.",
+   "routes": [
+    "/webhooks/{name}"
+   ]
+  },
+  {
+   "slug": "webhook-server",
+   "upstream": "spatie/laravel-webhook-server",
+   "version": null,
+   "qualifier": null,
+   "summary": "(the CLIENT side: signing + sending a webhook to a third-party endpoint).",
+   "routes": [
+    "/webhook-server/send"
+   ]
+  },
+  {
+   "slug": "webpush-notification",
+   "upstream": "laravel-notification-channels/webpush",
+   "version": null,
+   "qualifier": null,
+   "summary": "Web Push notification channel.",
+   "routes": [
+    "/notify/webpush",
+    "/webpush/subscribe"
+   ]
+  },
+  {
+   "slug": "welcome-notification",
+   "upstream": "spatie/laravel-welcome-notification",
+   "version": null,
+   "qualifier": null,
+   "summary": "POST /welcome-notify.",
+   "routes": []
+  },
+  {
+   "slug": "xendit-webhook",
+   "upstream": "the xendit/xendit-php webhook handling (payment callback) at the edge",
+   "version": null,
+   "qualifier": null,
+   "summary": "Route seam: registry.json → \"ports\": { \"/xendit/webhook\": \"xendit-webhook\" }",
+   "routes": []
+  }
+ ],
+ "surfaces": [
+  {
+   "laravel": "Illuminate\\Support\\Str",
+   "module": "str.mjs",
+   "kind": "methods",
+   "items": [
+    "after",
+    "ascii",
+    "before",
+    "camel",
+    "contains",
+    "endsWith",
+    "finish",
+    "is",
+    "isUrl",
+    "kebab",
+    "length",
+    "limit",
+    "lower",
+    "random",
+    "replace",
+    "replaceFirst",
+    "replaceLast",
+    "slug",
+    "snake",
+    "squish",
+    "start",
+    "startsWith",
+    "studly",
+    "title",
+    "ucfirst",
+    "ucwords",
+    "upper"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Support\\Arr",
+   "module": "arr.mjs",
+   "kind": "methods",
+   "items": [
+    "dot",
+    "except",
+    "first",
+    "get",
+    "has",
+    "last",
+    "only",
+    "wrap"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Support\\Collection",
+   "module": "collections.mjs",
+   "kind": "class",
+   "items": [
+    "Collection"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Database\\Eloquent\\Model",
+   "module": "model.mjs",
+   "kind": "class",
+   "items": [
+    "Model"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Database\\Query\\Builder",
+   "module": "db.mjs",
+   "kind": "class",
+   "items": [
+    "QueryBuilder"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Session\\Store",
+   "module": "session.mjs",
+   "kind": "class",
+   "items": [
+    "CookieJar",
+    "CookieSessionHandler",
+    "DatabaseSessionHandler",
+    "PhpSessionStore",
+    "SessionError"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Validation\\Validator",
+   "module": "validator.mjs",
+   "kind": "class",
+   "items": [
+    "Validator"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Foundation\\Http\\FormRequest",
+   "module": "form-request.mjs",
+   "kind": "class",
+   "items": [
+    "FormRequest"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Http\\Resources\\Json\\JsonResource",
+   "module": "resources.mjs",
+   "kind": "class",
+   "items": [
+    "AnonymousResourceCollection",
+    "JsonResource",
+    "ResourceCollection"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Mail\\Mailable",
+   "module": "mailable.mjs",
+   "kind": "class",
+   "items": [
+    "Mailable"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Cache\\DatabaseStore",
+   "module": "cache.mjs",
+   "kind": "class",
+   "items": [
+    "DatabaseCacheStore"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Cache\\RateLimiter",
+   "module": "ratelimit.mjs",
+   "kind": "class",
+   "items": [
+    "ArrayCacheStore",
+    "HttpResponseError",
+    "Limit",
+    "MissingRateLimiterError",
+    "RateLimiter",
+    "RateLimitError",
+    "ThrottleRequests",
+    "ThrottleRequestsError",
+    "Unlimited"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Routing\\Router",
+   "module": "router.mjs",
+   "kind": "class",
+   "items": [
+    "allowedMethods",
+    "dispatch",
+    "match",
+    "normalizeTable",
+    "routeKey"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Cookie",
+   "module": "cookies.mjs",
+   "kind": "class",
+   "items": [
+    "CookieError",
+    "ResponseCookies"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Foundation\\Http\\Middleware\\PreventRequestForgery",
+   "module": "csrf.mjs",
+   "kind": "class",
+   "items": [
+    "CsrfError",
+    "OriginMismatchError",
+    "PreventRequestForgery",
+    "TokenMismatchError"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Auth\\SessionGuard",
+   "module": "auth.mjs",
+   "kind": "class",
+   "items": [
+    "Authenticate",
+    "AuthenticationException",
+    "AuthError",
+    "AuthManager",
+    "BcryptHasher",
+    "EloquentUserProvider",
+    "PortedGuard",
+    "Recaller",
+    "RedirectIfAuthenticated",
+    "SessionGuard",
+    "Timebox"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Pagination\\LengthAwarePaginator",
+   "module": "paginator.mjs",
+   "kind": "class",
+   "items": [
+    "LengthAwarePaginator"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Encryption\\Encrypter",
+   "module": "encrypter.mjs",
+   "kind": "class",
+   "items": [
+    "DecryptError"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Hashing\\BcryptHasher",
+   "module": "hash.mjs",
+   "kind": "class",
+   "items": [
+    "check",
+    "isHashed",
+    "isHashedDigest",
+    "make",
+    "makeSync",
+    "needsRehash",
+    "passwordInfo",
+    "timingSafeEqual",
+    "verifyConfiguration"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Console\\Scheduling\\Schedule",
+   "module": "scheduler.mjs",
+   "kind": "class",
+   "items": [
+    "cronMatches",
+    "defineSchedule",
+    "dueEvents"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Queue",
+   "module": "queue.mjs",
+   "kind": "class",
+   "items": [
+    "createQueue"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Filesystem",
+   "module": "storage.mjs",
+   "kind": "class",
+   "items": [
+    "BLOB_DDL",
+    "BLOB_TABLE",
+    "createStorage",
+    "MAX_BLOB_BYTES"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Redis",
+   "module": "redis.mjs",
+   "kind": "class",
+   "items": [
+    "RedisStore",
+    "RedisUnsupportedError"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\View\\ViewErrorBag",
+   "module": "view-error-bag.mjs",
+   "kind": "class",
+   "items": [
+    "MessageBag",
+    "ViewErrorBag"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Http\\Response",
+   "module": "response.mjs",
+   "kind": "class",
+   "items": [
+    "html",
+    "json",
+    "notFound",
+    "redirect",
+    "text"
+   ]
+  },
+  {
+   "laravel": "Intervention\\Image",
+   "module": "image.mjs",
+   "kind": "class",
+   "items": [
+    "convertImage",
+    "cropImage",
+    "imageInfo",
+    "readImage",
+    "resizeImage",
+    "storeImage",
+    "watermarkImage"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Mail",
+   "module": "mail.mjs",
+   "kind": "class",
+   "items": [
+    "createMailer"
+   ]
+  },
+  {
+   "laravel": "Illuminate\\Http\\Request",
+   "module": "http.mjs",
+   "kind": "class",
+   "items": [
+    "HttpError",
+    "HttpResponse"
+   ]
+  }
+ ],
  "playbook": {
   "published": false,
   "source": "notes/PLAYBOOK.local.md",
   "note": "working-tree note, not in the repository: only its shape is republished here",
   "counts": {
    "justified": 7,
-   "ledger": 20,
-   "corrections": 12,
+   "ledger": 23,
+   "corrections": 16,
    "fixes": 26
   },
   "statuses": {
    "OPEN": 14,
-   "DONE": 5,
-   "FIX": 1
+   "DONE": 7,
+   "FIX": 2
   },
   "qualified": {
    "OPEN (KOREKSI)": 1,
    "OPEN (KLARIFIKASI)": 1,
    "DONE (2026-11-03)": 4,
    "DONE (2026-11-04), COMMIT 030A07B": 1,
-   "FIX DI PR (2026-11-07)": 1
+   "FIX DI PR (2026-11-07)": 1,
+   "FIX RENDAH; KONSEKUENSI TINGGI (HASIL BUILD NON-DETERMINISTIK ANTAR MESIN)": 1,
+   "DONE (2026-11-09)": 2
   },
   "areas": {
    "tes": 2,
@@ -2624,9 +5068,12 @@
    "fitur + bug P2": 1,
    "bug P1": 1,
    "bug P3": 1,
-   "bug P1 (dari app konsumen)": 1
+   "bug P1 (dari app konsumen)": 1,
+   "bug P1 (determinisme build)": 1,
+   "gap fitur (Livewire 4 morph markers)": 1,
+   "tes/higiene fixture": 1
   },
-  "citing": 9,
+  "citing": 12,
   "rows": [
    {
     "id": "S1",
@@ -2727,17 +5174,34 @@
     "id": "S20",
     "area": "bug P1 (dari app konsumen)",
     "status": "FIX"
+   },
+   {
+    "id": "S21",
+    "area": "bug P1 (determinisme build)",
+    "status": "FIX"
+   },
+   {
+    "id": "S22",
+    "area": "gap fitur (Livewire 4 morph markers)",
+    "status": "DONE"
+   },
+   {
+    "id": "S23",
+    "area": "tes/higiene fixture",
+    "status": "DONE"
    }
   ],
   "corrections": {
-   "total": 12,
+   "total": 16,
    "rulings": {
     "SALAH": 3,
     "TERTOLAK": 3,
     "TERTUTUP": 1,
-    "KOREKSI": 3,
+    "KOREKSI": 5,
     "SEBAGIAN": 1,
-    "STATUS": 1
+    "STATUS": 1,
+    "TERJELASKAN": 1,
+    "ANOMALI": 1
    }
   },
   "severity": {
@@ -2758,7 +5222,7 @@
   {
    "name": "tools/constructs.json tallies with the README counter block",
    "ok": true,
-   "detail": "constructs.json 47/64/7 of 118, README {\"compiles\":47,\"failsLoud\":64,\"documented\":7,\"audited\":118}"
+   "detail": "constructs.json 54/57/7 of 118, README {\"compiles\":54,\"failsLoud\":57,\"documented\":7,\"audited\":118}"
   },
   {
    "name": "the audit table carries every construct, with the same verdict",
@@ -2803,12 +5267,12 @@
   {
    "name": "the ledger table is read whole (a blank line inside it does not truncate)",
    "ok": true,
-   "detail": "20 rows parsed, 20 in the G.3 section"
+   "detail": "23 rows parsed, 23 in the G.3 section"
   },
   {
    "name": "every ledger status cell carries a status token, not a shifted column",
    "ok": true,
-   "detail": "{\"OPEN\":14,\"DONE\":5,\"FIX\":1} (the ledger legend names OPEN / DONE / TOLAK; newer rows use others)"
+   "detail": "{\"OPEN\":14,\"DONE\":7,\"FIX\":2} (the ledger legend names OPEN / DONE / TOLAK; newer rows use others)"
   },
   {
    "name": "the feature map yields at least one row per area",
@@ -2829,6 +5293,31 @@
    "name": "the audit scratchpad row count is quoted from the source",
    "ok": true,
    "detail": "scratchpad 581 rows, spread {\"P1\":10,\"P2\":72,\"P3\":224,\"INFO\":93}"
+  },
+  {
+   "name": "every registry port slug has a module file, and every module is reachable from the registry",
+   "ok": true,
+   "detail": "63 modules, 47 slugs in registry.example.json"
+  },
+  {
+   "name": "every port module states what it replaces (an upstream and a summary)",
+   "ok": true,
+   "detail": "63/63 with both"
+  },
+  {
+   "name": "every Laravel surface row points at a kernel module that exists",
+   "ok": true,
+   "detail": "28 surfaces, 119 named members"
+  },
+  {
+   "name": "the package fleet reads whole: every cluster row is in the source table",
+   "ok": true,
+   "detail": "134 package entries across 26 clusters"
+  },
+  {
+   "name": "every package entry carries at least one verdict token",
+   "ok": true,
+   "detail": "0 without a verdict"
   }
  ]
 }

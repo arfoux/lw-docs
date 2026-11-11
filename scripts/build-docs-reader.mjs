@@ -8,24 +8,13 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { flatDocs } from '../src/data/docs.js';
 
 const DIST = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 
-const ORDER = [
-  { slug: '',              title: 'Getting started',  group: 'Start' },
-  { slug: 'cli',           title: 'CLI reference',    group: 'Start' },
-  { slug: 'deploy',        title: 'Deploy',           group: 'Guide' },
-  { slug: 'routes',        title: 'Routes & ports',   group: 'Guide' },
-  { slug: 'blade',         title: 'Blade & parity',   group: 'Guide' },
-  { slug: 'data',          title: 'Data & D1',        group: 'Guide' },
-  { slug: 'auth',          title: 'Auth & sessions',  group: 'Guide' },
-  { slug: 'frontend',      title: 'Frontend & assets', group: 'Guide' },
-  { slug: 'compatibility', title: 'Compatibility',    group: 'Reference' },
-  { slug: 'ci',            title: 'CI & verdict',     group: 'Reference' },
-  { slug: 'limits',        title: 'Limits',           group: 'Reference' },
-  { slug: 'architecture',  title: 'Architecture',     group: 'Reference' },
-  { slug: 'faq',           title: 'FAQ',              group: 'Reference' },
-];
+// The reader's page list IS the documentation tree (src/data/docs.js), so a page
+// added to the navigation cannot go missing here.
+const ORDER = flatDocs.map(({ slug, title, group }) => ({ slug, title, group }));
 
 function extractProse(html) {
   const match = html.match(/<div class="prose">([\s\S]*?)<\/div>\s*<\/article>/);

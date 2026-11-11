@@ -1,0 +1,209 @@
+---
+import Docs from '../../layouts/Docs.astro';
+import { packages, ports, surfaces, number } from '../../lib/report.js';
+import { site } from '../../data/site.js';
+
+// The five verdicts are the fleet note's own words (docs/PACKAGES-RESEARCH.md).
+// The site does not re-judge a package: it republishes the note's cluster table,
+// its per-package verdict lines, and the modules the repository actually ships.
+const V = {
+  compile: { label: 'compile', hint: 'the app code builds as-is' },
+  port: { label: 'port', hint: 'a JS module replaces the package at the edge' },
+  substitute: { label: 'substitute', hint: 'a declared stand-in, with the trade disclosed' },
+  special: { label: 'special', hint: 'install-only, or a case built by hand' },
+  refuse: { label: 'refuse', hint: 'cannot run at the edge, and fails loud' },
+};
+const order = ['compile', 'port', 'substitute', 'special', 'refuse'];
+const totals = packages.totals;
+
+// Entries grouped by the cluster the note files them under, in the note's order.
+const grouped = packages.clusters
+  .map((cluster) => ({ name: cluster.name, entries: packages.entries.filter((e) => e.cluster === cluster.name) }))
+  .filter((group) => group.entries.length > 0);
+const routed = ports.filter((p) => p.routes.length).length;
+const routeCount = ports.reduce((n, p) => n + p.routes.length, 0);
+const members = surfaces.reduce((n, s) => n + s.items.length, 0);
+const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
+---
+
+<Docs
+  title="Packages & ports"
+  description="The famous Laravel packages this project classifies, the ones that run at the edge as a JS port, and the Laravel APIs those ports replace."
+  slug="packages"
+  lead={`Five verdicts over ${number(packages.entries.length)} packages: ${number(totals.port)} are answered by a port module, and ${number(ports.length)} of those modules ship in the repository.`}
+  source={`docs/PACKAGES-RESEARCH.md, docs/PACKAGE-PORTS.md, ports/packages/*.mjs, kernel/*.mjs — extracted from repository ${site.audited.repo} at ${site.audited.head} (v${site.audited.version})`}
+>
+  <h2 id="fleet">The fleet, in five verdicts</h2>
+  <p>
+    A package does not get a pass for being popular. The research note takes each famous Laravel package
+    and gives it one verdict, using the same vocabulary the rest of the project uses: <strong>compile</strong>
+    {' '}(the app code builds the package's shape), <strong>port</strong> {' '}
+    (a JS module answers it at the edge), <strong>substitute</strong> {' '}
+    (a declared stand-in stands in for it), <strong>special</strong> {' '}
+    (only the install survives, or a case built by hand), and <strong>refuse</strong> {' '}
+    (it cannot run at the edge, and the build says so rather than degrading quietly).
+  </p>
+  <div class="table-wrap">
+    <table>
+      <caption>A package can carry more than one verdict (a ported half and a refused half), so the column totals exceed the entry count.</caption>
+      <thead>
+        <tr>
+          <th scope="col">verdict</th>
+          <th scope="col">meaning</th>
+          <th scope="col">entries</th>
+        </tr>
+      </thead>
+      <tbody>
+        {order.map((key) => (
+          <tr>
+            <th scope="row">
+              <span class="dot" data-pk={key} aria-hidden="true"></span>
+              <span class="mono">{V[key].label}</span>
+            </th>
+            <td>{V[key].hint}</td>
+            <td class="mono">{number(totals[key])}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">
+    The note holds {number(packages.entries.length)} package entries across {number(packages.clusters.length)} clusters.
+    The refused set is the larger, more instructive half: {number(totals.refuse)} packages name a wall the edge does not move
+    for popularity.
+  </p>
+
+  <h2 id="clusters">Where each cluster lands</h2>
+  <p>
+    The note's own summary table, republished as it stands. Each cell lists the packages that landed on
+    that verdict: a cluster is rarely uniform, and the split is the point.
+  </p>
+  <div class="table-wrap">
+    <table class="fit">
+      <thead>
+        <tr>
+          <th scope="col">cluster</th>
+          {order.map((key) => <th scope="col">{V[key].label}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {packages.clusters.map((cluster) => (
+          <tr>
+            <th scope="row">{cluster.name}</th>
+            {order.map((key) => (
+              <td class="small">{cluster.cells[key] || <span class="muted">none</span>}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="entries">Every package, with its verdict</h2>
+  <p>
+    The same note, entry by entry, under the cluster it is filed under. Each package keeps the note's
+    verdict and its one-line reason.
+  </p>
+  {grouped.map((group) => (
+    <section class="pk">
+      <h3 id={`c-${group.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>{group.name}</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">package</th>
+              <th scope="col">verdict</th>
+              <th scope="col">the note's reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.entries.map((entry) => (
+              <tr>
+                <th scope="row" class="mono">
+                  {entry.name}
+                  {entry.version && <span class="muted"> {entry.version}</span>}
+                </th>
+                <td class="cell-verdict">
+                  {entry.verdicts.map((key) => (
+                    <span class="v" data-k={key}>{key}</span>
+                  ))}
+                </td>
+                <td class="small">{entry.note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ))}
+
+  <h2 id="modules">The ports that ship</h2>
+  <p>
+    The port verdict is not a promise: {number(ports.length)} modules are in the repository's
+    <code>ports/packages/</code>, and {number(routed)} of them are wired to
+    {' '}{number(routeCount)} route paths through <code>registry.example.json</code>. Each module states
+    what it replaces in its own header; the summary column is that statement, not a gloss.
+  </p>
+  <div class="table-wrap">
+    <table class="fit">
+      <caption>One row per <code>ports/packages/*.mjs</code> module. A slug with no route is a helper or a middleware port, reached another way.</caption>
+      <thead>
+        <tr>
+          <th scope="col">module</th>
+          <th scope="col">replaces</th>
+          <th scope="col">what runs at the edge</th>
+        </tr>
+      </thead>
+      <tbody>
+        {ports.map((port) => (
+          <tr>
+            <th scope="row">
+              <span class="mono mod">{port.slug}</span>
+              <span class="port-routes small muted">
+                {port.routes.length ? port.routes.join(', ') : 'middleware / helper'}
+              </span>
+            </th>
+            <td class="small">
+              <span class="mono">{port.upstream}</span>
+              {port.version && <span class="muted"> v{port.version}</span>}
+              {port.qualifier && <span class="muted"> ({port.qualifier})</span>}
+            </td>
+            <td class="small">{port.summary}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="surfaces">The Laravel APIs behind them</h2>
+  <p>
+    A port leans on the kernel: the modules that stand in for a Laravel class or facade. The surface column
+    is what that module exports today, read from the file. {number(members)} names across
+    {' '}{number(surfaces.length)} surfaces.
+  </p>
+  <div class="table-wrap">
+    <table class="fit">
+      <thead>
+        <tr>
+          <th scope="col">Laravel API</th>
+          <th scope="col">kernel module</th>
+          <th scope="col">surface</th>
+        </tr>
+      </thead>
+      <tbody>
+        {bySize.map((surface) => (
+          <tr>
+            <th scope="row" class="mono">{surface.laravel}</th>
+            <td class="mono mod">{surface.module}</td>
+            <td class="small mono surface">{surface.items.join(' · ')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <p class="small muted">
+    Verdicts and reasons come from the repository's research note; the module list, the route seams and the
+    exported surfaces come from the files themselves. Numbers on this page are counted at build time, never typed.
+  </p>
+</Docs>
