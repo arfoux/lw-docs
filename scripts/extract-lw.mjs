@@ -368,11 +368,10 @@ const playbook = {
   severityLegend,
 };
 
-// README publishes the project's verdict twice, and the two strings are not the same
-// one: the shields badge under the title, and the heading its CI reporter posts on a
-// pull request. Both are read from the file rather than restated here.
+// The badge lives in README; the reporter's heading lives in docs/CI.md (README
+// no longer repeats it). Both are read from their source rather than restated.
 const verdictBadge = decodeURIComponent(readmeLines.join('\n').match(/badge\/verdict-([A-Za-z0-9%._~-]+?)-[0-9A-Fa-f]{6}/)?.[1] ?? '');
-const verdictHeading = readmeLines.join('\n').match(/`### Verdict: ([^`]+)`/)?.[1] ?? '';
+const verdictHeading = read('docs/CI.md').match(/^### Verdict: (.+)$/m)?.[1] ?? '';
 
 // ------------------------------------------------- published CPU figures (COMPILED.md)
 // The measurement table on /coverage/ is the one table on the site whose cells are the
@@ -428,7 +427,7 @@ const cpuMissing = cpuPublished.filter(([, needle]) => !compiledText.includes(ne
 // into one of five verdicts: compile / port / substitute / special / refuse. The
 // site republishes the note's own cluster table and its per-package verdict
 // lines; no package is re-judged here.
-const packagesText = read('docs/PACKAGES-RESEARCH.md');
+const packagesText = read('docs/archive/PACKAGES-RESEARCH.md');
 const packageLines = packagesText.split('\n');
 
 const PACKAGE_VERDICTS = ['compile', 'port', 'substitute', 'special', 'refuse'];

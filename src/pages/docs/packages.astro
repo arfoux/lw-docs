@@ -3,7 +3,7 @@ import Docs from '../../layouts/Docs.astro';
 import { packages, ports, portDoc, surfaces, number } from '../../lib/report.js';
 import { site } from '../../data/site.js';
 
-// The five verdicts are the fleet note's own words (docs/PACKAGES-RESEARCH.md).
+// The five verdicts are the fleet note's own words (docs/archive/PACKAGES-RESEARCH.md).
 // The site does not re-judge a package: it republishes the note's cluster table,
 // its per-package verdict lines, and the modules the repository actually ships.
 const V = {
@@ -24,6 +24,25 @@ const routed = ports.filter((p) => p.routes.length).length;
 const routeCount = ports.reduce((n, p) => n + p.routes.length, 0);
 const members = surfaces.reduce((n, s) => n + s.items.length, 0);
 const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
+
+// The seven packages asked about by name. Verdicts and versions come from the
+// extraction, not from a hand-maintained copy; the scope sentence says what the
+// showcase actually wires so a "port" verdict cannot be read as "whole package".
+const namedScope = {
+  'laravel/socialite': 'Full port: OAuth redirect + callback, state in the compiled session.',
+  'laravel/reverb': 'Auth-half only: /broadcasting/auth is signed at the edge; the WebSocket daemon is not ported.',
+  'spatie/laravel-permission': 'Guarded D1 port: role/permission reads and writes require the session guard.',
+  'maatwebsite/excel': 'CSV-only port; XLSX is refused with 406, never faked.',
+  'filament/filament': 'Refuse: Livewire SDUI panel, no vendor runtime at the edge.',
+  'laravel/breeze': 'Compile / install-only: the Blade scaffold is app code; the installer is dev-only.',
+  'barryvdh/laravel-debugbar': 'Refuse: dev-only provider and collectors; D1 metrics + wrangler tail instead.',
+};
+const named = Object.keys(namedScope)
+  .map((key) => {
+    const entry = packages.entries.find((e) => e.name === key || e.name.startsWith(`${key} `));
+    return entry ? { key, entry, scope: namedScope[key] } : null;
+  })
+  .filter(Boolean);
 ---
 
 <Docs
@@ -31,7 +50,7 @@ const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
   description="The famous Laravel packages this project classifies, the ones that run at the edge as a JS port, and the Laravel APIs those ports replace."
   slug="packages"
   lead={`Five verdicts over ${number(packages.entries.length)} packages: ${number(totals.port)} are answered by a port module, and ${number(ports.length)} of those modules ship in the repository.`}
-  source={`docs/PACKAGES-RESEARCH.md, docs/PACKAGE-PORTS.md, ports/packages/*.mjs, kernel/*.mjs — extracted from repository ${site.audited.repo} at ${site.audited.head} (v${site.audited.version})`}
+  source={`docs/archive/PACKAGES-RESEARCH.md, docs/PACKAGE-PORTS.md, ports/packages/*.mjs, kernel/*.mjs — extracted from repository ${site.audited.repo} at ${site.audited.head} (v${site.audited.version})`}
 >
   <h2 id="fleet">The fleet, in five verdicts</h2>
   <p>
@@ -71,6 +90,41 @@ const bySize = [...surfaces].sort((a, b) => b.items.length - a.items.length);
     The note holds {number(packages.entries.length)} package entries across {number(packages.clusters.length)} clusters.
     The refused set is the larger, more instructive half: {number(totals.refuse)} packages name a wall the edge does not move
     for popularity.
+  </p>
+
+  <h2 id="named-seven">The seven packages, by name</h2>
+  <p>
+    These {number(named.length)} entries are selected from the same extraction, not from a second list.
+    The verdict column is the research note's own classification; the scope column says what the
+    showcase actually answers, so a <span class="mono">port</span> verdict is never mistaken for the
+    whole package running at the edge.
+  </p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">package</th>
+          <th scope="col">note version</th>
+          <th scope="col">verdict</th>
+          <th scope="col">edge scope</th>
+        </tr>
+      </thead>
+      <tbody>
+        {named.map(({ key, entry, scope }) => (
+          <tr>
+            <th scope="row" class="mono">{key}</th>
+            <td class="mono">{entry.version || '—'}</td>
+            <td class="mono">{entry.verdicts.join(', ')}</td>
+            <td>{scope}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">
+    Reverb's note verdict is <span class="mono">refuse</span> because the package is a WebSocket daemon;
+    the signed <span class="mono">/broadcasting/auth</span> seam is still a real port. Breeze's
+    <span class="mono">compile</span> verdict covers the Blade scaffold it installs, not an SPA preset.
   </p>
 
   <h2 id="clusters">Where each cluster lands</h2>
