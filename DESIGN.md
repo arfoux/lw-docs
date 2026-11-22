@@ -1,6 +1,6 @@
 # DESIGN.md
 
-Direction for the site at `laravel-workers-report`. Written by the agent on the owner's
+Direction for the site at `lw-docs`. Written by the agent on the owner's
 instruction, not invented as an example. The site has two surfaces — the product (landing
 and documentation) and the audit — and the design differs between them on purpose.
 
