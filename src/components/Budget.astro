@@ -1,10 +1,16 @@
 ---
 // The one chart on the site: measured CPU against the Free plan's 10 ms budget.
+// Editorial dumbbells, not coloured status bars: a hairline is the measured spread,
+// a hollow square is the floor, a solid square is the ceiling, and a hollow circle is
+// a percentile. One accent — the native JS handler — is the only focal mark. Status is
+// written in words next to each value; colour never has to carry it alone.
+//
 // Log scale, because the interesting numbers span four orders of magnitude — and a
 // linear axis would draw the compiled handler as a zero-width line, which is a lie of
 // a different kind. Every number is the source's own; the audit re-states each one.
 const W = 920;
-const PAD_L = 96;
+const H = 304;
+const PAD_L = 128;
 const PAD_R = 28;
 const MIN = 1;
 const MAX = 2600;
@@ -20,86 +26,100 @@ const rows = [
     to: 2018,
     dots: [],
     value: '1,008–2,018 ms',
-    tone: 'var(--blocked)',
     tag: 'over budget',
     side: 'left',
   },
   {
-    y: 172,
+    y: 176,
     label: 'kernel hot paths',
     sub: 'page-like probe',
     from: 5,
     to: 62,
     dots: [5, 41],
     value: 'p50 5 · p95 41 · max 62',
-    tone: 'var(--documented)',
     tag: 'tail over',
   },
   {
-    y: 248,
+    y: 256,
     label: 'port handler',
     sub: 'native JS',
     from: 1,
     to: 6,
     dots: [],
     value: '1–6 ms',
-    tone: 'var(--compiles)',
     tag: 'fits',
+    focal: true,
   },
 ];
 const budgetX = x(10);
 ---
 
 <figure class="budgetfig">
-  <svg viewBox={`0 0 ${W} 300`} role="img" aria-labelledby="budget-title budget-desc" class="budgetfig__svg">
+  <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-labelledby="budget-title budget-desc" class="budgetfig__svg">
     <title id="budget-title">Measured CPU per request against the Free plan's 10 ms budget</title>
     <desc id="budget-desc">
       On a logarithmic axis from 1 to 2,600 milliseconds: a PHP-in-Worker cold boot measured
       1,008 to 2,018 milliseconds; the kernel's page-like load measured a p50 of 5, a p95 of 41 and a
       max of 62 milliseconds; a hand-written port handler measured 1 to 6 milliseconds. The dashed
-      line is the Free plan's 10 millisecond budget.
+      line is the Free plan's 10 millisecond budget. Hollow squares mark the low end of each
+      measured spread, solid squares the high end, hollow circles the p50 and p95. The native JS
+      handler is the single accented mark.
     </desc>
 
     <g class="bf-grid">
       {ticks.map((ms) => (
         <g>
-          <line x1={x(ms)} y1="62" x2={x(ms)} y2="272" />
-          <text x={x(ms)} y="292" text-anchor="middle">{ms >= 1000 ? `${ms / 1000},000` : ms}</text>
+          <line x1={x(ms)} y1="64" x2={x(ms)} y2="280" />
+          <text x={x(ms)} y="300" text-anchor="middle">{ms >= 1000 ? `${ms / 1000},000` : ms}</text>
         </g>
       ))}
     </g>
 
-    <line class="bf-budget" x1={budgetX} y1="56" x2={budgetX} y2="272" />
-    <text class="bf-budgetlabel" x={budgetX + 8} y="34">10 ms budget</text>
+    <line class="bf-budget" x1={budgetX} y1="56" x2={budgetX} y2="280" />
+    <text class="bf-budgetlabel" x={budgetX + 8} y="48">10 ms budget</text>
 
     {rows.map((row) => (
-      <g class="bf-row">
-        <text class="bf-label" x={PAD_L - 16} y={row.y + 4} text-anchor="end">{row.label}</text>
-        <text class="bf-sub" x={PAD_L - 16} y={row.y + 19} text-anchor="end">{row.sub}</text>
-        <line class="bf-bar" x1={x(row.from)} y1={row.y} x2={x(row.to)} y2={row.y} style={`stroke:${row.tone}`} />
+      <g class={`bf-row${row.focal ? ' bf-row--focal' : ''}`}>
+        <text class="bf-label" x={PAD_L - 16} y={row.y - 4} text-anchor="end">{row.label}</text>
+        <text class="bf-sub" x={PAD_L - 16} y={row.y + 16} text-anchor="end">{row.sub}</text>
+
+        <line class="bf-span" x1={x(row.from)} y1={row.y} x2={x(row.to)} y2={row.y} />
+        <rect class="bf-cap" x={x(row.from) - 4} y={row.y - 4} width="8" height="8" />
+        <rect class={row.focal ? 'bf-cap bf-cap--focal' : 'bf-cap bf-cap--end'} x={x(row.to) - 4} y={row.y - 4} width="8" height="8" />
         {row.dots.map((dot) => (
-          <circle class="bf-dot" cx={x(dot)} cy={row.y} r="3.5" style={`fill:${row.tone}`} />
+          <circle class="bf-dot" cx={x(dot)} cy={row.y} r="3" />
         ))}
+
         <text
           class="bf-value"
           x={row.side === 'left' ? x(row.from) - 14 : x(row.to) + 12}
-          y={row.y + 4}
+          y={row.y - 4}
           text-anchor={row.side === 'left' ? 'end' : 'start'}
         >{row.value}</text>
         <text
-          class="bf-tag"
+          class={row.focal ? 'bf-tag bf-tag--focal' : 'bf-tag'}
           x={row.side === 'left' ? x(row.from) - 14 : x(row.to) + 12}
-          y={row.y + 18}
+          y={row.y + 16}
           text-anchor={row.side === 'left' ? 'end' : 'start'}
-          style={`fill:${row.tone}`}
         >{row.tag}</text>
       </g>
     ))}
   </svg>
+
+  <!-- Under 52rem the 920-unit chart would shrink its 9px labels below legibility. -->
+  <ol class="budgetfig__mobile">
+    {rows.map((row) => (
+      <li>
+        <span class="bf-m-label">{row.label}</span>
+        <span class="bf-m-value">{row.sub} — {row.value} · {row.tag}</span>
+      </li>
+    ))}
+  </ol>
   <figcaption>
-    Log scale, 1 ms to 2,000 ms per request. A bar is the spread the probe recorded; a dot is a
-    percentile. Sources: <span class="mono">MAP.md</span> §1 (the PHP-in-Worker probe), the
-    project's <span class="mono">npm run gate:cpu</span> (page-like load, read back from the
-    platform's own cpuTime and outcome) and the port-handler probe.
+    Log scale, 1 ms to 2,000 ms per request. A hairline is the spread the probe recorded; a hollow
+    square is its low end, a solid square its high end, and a hollow circle a percentile. Sources:
+    <span class="mono">MAP.md</span> §1 (the PHP-in-Worker probe), the project's
+    <span class="mono">npm run gate:cpu</span> (page-like load, read back from the platform's own
+    cpuTime and outcome) and the port-handler probe.
   </figcaption>
 </figure>

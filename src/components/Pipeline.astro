@@ -1,153 +1,150 @@
 ---
-// The hero figure, drawn shapes-first. Every stage is an icon — file-type glyph, phase
-// glyph, tier glyph, the Cloudflare worker shape — so the eye reads the flow before it
-// reads any label; text is the second channel, not the first. One geometry per icon
-// (a 24px box, 1.6px stroke, square-ish corners), inlined below so the figure stays a
-// single SVG. Everything is drawn twice: the static frame (print, screenshot,
-// reduced-motion) and a short compositor-only loop of motion layered on top of it.
+// The hero figure, redrawn as an editorial three-stage schematic: source → build →
+// artifact. One accent (the compiled tier), 1px rules, no shadow, no gradient, and
+// every structural coordinate on the 4px grid. Icons are inert line glyphs beside
+// their own labels; the static frame is the whole figure, and the loop only shows
+// traffic moving through it.
 const ICON = {
   route: '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6h5a3 3 0 0 1 3 3v6.5"/><path d="M15 18H8.5a3 3 0 0 1-3-3V8.5"/>',
   compiler: '<path d="M4 4h16v9H4z"/><path d="M9 13v3l3 2 3-2v-3"/><path d="M4 20h16"/>',
   layers: '<path d="M12 3.5 20 8l-8 4.5L4 8z"/><path d="M4 12.4 12 17l8-4.6"/><path d="M4 16.6 12 21l8-4.4"/>',
   blade: '<path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5"/><path d="M9.5 13.5 12 16l5-5.5"/>',
   database: '<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/>',
-  cache: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9M8 11.4l4-3.9 4 3.9"/><path d="M8 16h8"/>',
-  file: '<path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5"/>',
   camera: '<path d="M4 8.5h3l1.6-2.5h6.8L17 8.5h3v10H4z"/><circle cx="12" cy="13.5" r="3.2"/>',
   bolt: '<path d="M13.5 3 5.5 13.5H11L10 21l8.2-10.7H13z"/>',
   plug: '<path d="M9 3.5v5M15 3.5v5"/><path d="M6.5 8.5h11v3a5.5 5.5 0 0 1-11 0z"/><path d="M12 17v3.5"/>',
-  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2.2M12 18.3v2.2M4.6 12H6.8M17.2 12h2.2M6.7 6.7l1.6 1.6M15.7 15.7l1.6 1.6M17.3 6.7l-1.6 1.6M8.3 15.7l-1.6 1.6"/>',
-  check: '<circle cx="12" cy="12" r="8.5"/><path d="M8.4 12.4 11 15l4.8-6"/>',
+  file: '<path d="M6 3.5h8l4.5 4.5v12.5H6z"/><path d="M14 3.5V8h4.5"/>',
   edge: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 2.6 14.6 0 17M12 3.5c-2.6 2.4-2.6 14.6 0 17"/>',
   worker: '<path d="M12 3 20 7.5v9L12 21 4 16.5v-9z"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>',
-  cloud: '<path d="M15.4 14.6h3.9a2.6 2.6 0 0 0 .2-5.2 4.4 4.4 0 0 0-8.3-1.3 3.4 3.4 0 0 0-4.9 2.6A2.9 2.9 0 0 0 6.6 16h8.8z"/>',
 };
 
-// <g> wrapper: 24px box, translate + scale to place, currentColor so CSS tints it.
-const icon = (name, x, y, scale = 1, color = '') =>
+// 24px box, translated into place, currentColor so the CSS owns the ink.
+const icon = (name, x, y, scale = 1) =>
   `<g transform="translate(${x} ${y}) scale(${scale})" fill="none" stroke="currentColor" ` +
-  `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"${color ? ` style="color:${color}"` : ''}>${ICON[name]}</g>`;
+  `stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name]}</g>`;
 
 const files = [
-  { name: 'routes/web.php', icon: 'route', color: 'var(--workers)' },
-  { name: 'app/Http/Controllers/PostController.php', icon: 'compiler', color: 'var(--fg-muted)' },
-  { name: 'app/Models/Post.php', icon: 'layers', color: 'var(--compiles)' },
-  { name: 'resources/views/posts/show.blade.php', icon: 'blade', color: 'var(--laravel)' },
-  { name: 'database/migrations/2026_10_01_posts.php', icon: 'database', color: '#4f8cff' },
+  { name: 'routes/web.php', icon: 'route' },
+  { name: 'app/Http/Controllers/PostController.php', icon: 'compiler' },
+  { name: 'app/Models/Post.php', icon: 'layers' },
+  { name: 'resources/views/posts/show.blade.php', icon: 'blade' },
+  { name: 'database/migrations/2026_10_01_posts.php', icon: 'database' },
 ];
 
 const phases = [
-  { name: 'schema', icon: 'database', out: 'migrations → CREATE DDL', boot: '1 boot', x: 430, y: 116 },
-  { name: 'views', icon: 'blade', out: 'blade → js render(ctx)', boot: '1 boot', x: 586, y: 116 },
-  { name: 'snapshots', icon: 'camera', out: 'clean GETs → HTML', boot: '0–1 boot', x: 430, y: 216 },
-  { name: 'metadata', icon: 'route', out: 'route table + census', boot: '0–1 boot', x: 586, y: 216 },
+  { name: 'schema', icon: 'database', out: 'migrations → CREATE DDL', boot: '1 boot', x: 432, y: 112 },
+  { name: 'views', icon: 'blade', out: 'blade → js render(ctx)', boot: '1 boot', x: 600, y: 112 },
+  { name: 'snapshots', icon: 'camera', out: 'clean GETs → HTML', boot: '0–1 boot', x: 432, y: 200 },
+  { name: 'metadata', icon: 'route', out: 'route table + census', boot: '0–1 boot', x: 600, y: 200 },
 ];
 
 const tiers = [
-  { name: 'static', icon: 'file', value: '0 invocations', y: 126 },
-  { name: 'snapshot', icon: 'camera', value: 'prerendered', y: 182 },
-  { name: 'compiled', icon: 'bolt', value: 'p95 ≤ 5 ms', y: 238 },
-  { name: 'port', icon: 'plug', value: 'hand-written', y: 294 },
+  { name: 'static', icon: 'file', value: '0 invocations', y: 136 },
+  { name: 'snapshot', icon: 'camera', value: 'prerendered', y: 192 },
+  { name: 'compiled', icon: 'bolt', value: 'p95 ≤ 5 ms', y: 248, focal: true },
+  { name: 'port', icon: 'plug', value: 'hand-written', y: 304 },
 ];
 ---
 
 <figure class="pipeline">
-  <svg class="pipeline__svg" viewBox="0 0 1160 470" role="img" aria-labelledby="pipeline-title pipeline-desc">
+  <svg class="pipeline__svg" viewBox="0 0 1160 468" role="img" aria-labelledby="pipeline-title pipeline-desc">
     <title id="pipeline-title">Laravel source is compiled at build time into one Worker module</title>
     <desc id="pipeline-desc">
-      Left: five Laravel files, each with its own file-type icon — routes, a controller, a model,
-      a Blade view and a migration. Middle: the build, where PHP 8.3 runs once per phase (schema,
-      views, snapshots, metadata) and the source is translated to JavaScript. Right: a single
-      dist/worker.mjs on Cloudflare Workers, served through four tiers — static, snapshot,
-      compiled, port — and answered at the edge. The static frame carries the whole meaning; the
+      Three stages on one rail. Left: five Laravel files — routes, controller, model, Blade view
+      and migration. Middle: the build, where PHP 8.3 boots once per phase (schema, views,
+      snapshots, metadata) and translates source to JavaScript. Right: one dist/worker.mjs on
+      Cloudflare Workers, answered as a static file, a snapshot, a compiled handler or a port.
+      The compiled tier is the focal element. The static frame carries the whole meaning; the
       animation only shows traffic moving through it.
     </desc>
 
-    <g class="pl-zone">
-      <line x1="392" y1="24" x2="392" y2="446" />
-      <line x1="768" y1="24" x2="768" y2="446" />
+    <defs>
+      <marker id="pl-tip" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+        <path class="pl-tip" d="M0 0l8 4-8 4z" />
+      </marker>
+    </defs>
+
+    <g class="pl-zone" aria-hidden="true">
+      <line x1="400" y1="24" x2="400" y2="444" />
+      <line x1="780" y1="24" x2="780" y2="444" />
     </g>
 
-    <!-- LEFT: your app, one card per file, the icon IS the file type -->
-    <text class="pl-label" x="24" y="34">your laravel app</text>
+    <!-- Arrows first, so every line sits behind the boxes it connects. -->
+    <g class="pl-flow" aria-hidden="true">
+      <path d="M384 224h24" marker-end="url(#pl-tip)" />
+      <path d="M768 224h24" marker-end="url(#pl-tip)" />
+      <circle class="pl-packet pl-packet--a" cx="384" cy="224" r="4" />
+      <circle class="pl-packet pl-packet--b" cx="768" cy="224" r="4" />
+    </g>
+
+    <!-- LEFT: the source of truth, one neutral node per file. -->
+    <text class="pl-label" x="24" y="32">your laravel app</text>
     <text class="pl-sub" x="24" y="52">the source of truth — untouched</text>
     <g class="pl-files">
       {files.map((f, i) => (
         <g class="pl-file" style={`--i:${i}`}>
-          <rect x="24" y={70 + i * 54} width="348" height="44" rx="4" />
-          <Fragment set:html={icon(f.icon, 36, 70 + i * 54 + 10, 1, f.color)} />
-          <text class="pl-mono" x="70" y={70 + i * 54 + 28}>{f.name}</text>
+          <rect x="24" y={72 + i * 52} width="360" height="44" rx="4" />
+          <Fragment set:html={icon(f.icon, 36, 82 + i * 52)} />
+          <text class="pl-mono" x="76" y={100 + i * 52}>{f.name}</text>
         </g>
       ))}
     </g>
 
-    <!-- the source → build handoff, at the middle of the two columns -->
-    <g class="pl-flow" aria-hidden="true">
-      <path d="M372 190 H416" />
-      <path d="M752 190 H812" />
-      <circle class="pl-packet pl-packet--a" r="4" cx="372" cy="190" />
-      <circle class="pl-packet pl-packet--b" r="4" cx="752" cy="190" />
-    </g>
-
-    <!-- MIDDLE: the build -->
-    <text class="pl-label" x="416" y="34">build time · php 8.3</text>
+    <!-- MIDDLE: one container, four phase nodes, one cut strip. -->
+    <text class="pl-label" x="416" y="32">build time · php 8.3</text>
     <text class="pl-sub" x="416" y="52">boots once per phase, never per request</text>
-    <rect class="pl-press" x="416" y="100" width="336" height="214" rx="6" />
+    <rect class="pl-press" x="416" y="96" width="352" height="228" rx="6" />
 
     {phases.map((p, i) => (
       <g class="pl-phase" style={`--i:${i}`}>
-        <rect x={p.x} y={p.y} width="146" height="92" rx="5" />
-        <Fragment set:html={icon(p.icon, p.x + 16, p.y + 14, 1.1)} />
-        <text class="pl-mono" x={p.x + 16} y={p.y + 54}>{p.name}</text>
-        <text class="pl-sub2" x={p.x + 16} y={p.y + 70}>{p.out}</text>
-        <text class="pl-tag" x={p.x + 130} y={p.y + 54} text-anchor="end">{p.boot}</text>
+        <rect x={p.x} y={p.y} width="152" height="72" rx="4" />
+        <Fragment set:html={icon(p.icon, p.x + 12, p.y + 12)} />
+        <text class="pl-phase__name" x={p.x + 44} y={p.y + 28}>{p.name}</text>
+        <text class="pl-sub2" x={p.x + 12} y={p.y + 56}>{p.out}</text>
+        <text class="pl-tag" x={p.x + 140} y={p.y + 28} text-anchor="end">{p.boot}</text>
       </g>
     ))}
 
-    <!-- the cut: source units in, one module out -->
     <g class="pl-cut" aria-hidden="true">
+      <line x1="432" y1="292" x2="752" y2="292" />
       {[0, 1, 2, 3].map((i) => (
-        <rect class="pl-token" style={`--i:${i}`} x={508 + i * 52} y="104" width="8" height="8" rx="1" />
+        <rect class="pl-token" style={`--i:${i}`} x={440 + i * 32} y="300" width="8" height="8" rx="2" />
       ))}
-      <rect class="pl-bar" x="448" y="340" width="272" height="8" rx="2" />
-      <text class="pl-sub2" x="416" y="372">blade → php → js · byte-parity vs php 8.3</text>
+      <text class="pl-sub2" x="432" y="316">blade → php → js · byte-parity vs php 8.3</text>
     </g>
-    <line class="pl-scan" x1="416" y1="100" x2="752" y2="100" aria-hidden="true" />
+    <line class="pl-scan" x1="432" y1="112" x2="752" y2="112" aria-hidden="true" />
 
-    <!-- RIGHT: the worker -->
-    <text class="pl-label" x="796" y="34">cloudflare workers</text>
-    <text class="pl-sub" x="796" y="52">one ESM bundle · v8 isolates</text>
+    <!-- RIGHT: one bundle, four tiers, one edge rail. Only 'compiled' is focal. -->
+    <text class="pl-label" x="792" y="32">cloudflare workers</text>
+    <text class="pl-sub" x="792" y="52">one ESM bundle · v8 isolates</text>
 
     <g class="pl-bundle">
-      <rect x="796" y="60" width="340" height="56" rx="4" />
-      <Fragment set:html={icon('worker', 810, 74, 1.15, 'var(--workers)')} />
-      <text class="pl-mono" x="844" y="84">dist/worker.mjs</text>
-      <text class="pl-tag" x="1124" y="84" text-anchor="end">JS</text>
-      <text class="pl-sub2" x="844" y="102">static assets + handlers + schema.sql</text>
+      <rect x="792" y="72" width="344" height="48" rx="4" />
+      <Fragment set:html={icon('worker', 808, 84)} />
+      <text class="pl-mono" x="848" y="92">dist/worker.mjs</text>
+      <text class="pl-tag" x="1124" y="92" text-anchor="end">JS</text>
+      <text class="pl-sub2" x="848" y="108">static assets + handlers + schema.sql</text>
     </g>
 
     <g class="pl-tiers">
-      {tiers.map((t, i) => (
-        <g class="pl-tier" style={`--i:${i}`}>
-          <rect x="796" y={t.y} width="340" height="44" rx="4" />
-          <Fragment set:html={icon(t.icon, 810, t.y + 10, 1)} />
-          <text class="pl-mono" x="844" y={t.y + 28}>{t.name}</text>
+      {tiers.map((t) => (
+        <g class={`pl-tier${t.focal ? ' pl-tier--focal' : ''}`}>
+          <rect x="792" y={t.y} width="344" height="48" rx="4" />
+          <Fragment set:html={icon(t.icon, 808, t.y + 12)} />
+          <text class="pl-mono" x="848" y={t.y + 28}>{t.name}</text>
           <text class="pl-tag" x="1124" y={t.y + 28} text-anchor="end">{t.value}</text>
         </g>
       ))}
     </g>
 
-    <!-- the edge -->
-    <g class="pl-edge" aria-hidden="true">
-      <circle class="pl-ring" cx="966" cy="396" r="26" />
-      <circle class="pl-ring pl-ring--2" cx="966" cy="396" r="26" />
-      <Fragment set:html={icon('edge', 950, 380, 1.3, 'var(--workers)')} />
-      <text class="pl-sub2" x="1004" y="401">edge · request in, handler out</text>
+    <g class="pl-edge">
+      <rect x="792" y="368" width="344" height="48" rx="4" />
+      <Fragment set:html={icon('edge', 808, 380)} />
+      <text class="pl-sub2" x="848" y="396">edge · request in, handler out</text>
     </g>
   </svg>
 
-  <!-- A phone cannot read a 1160-unit diagram at 390px, and a horizontal scroll would hide
-       two thirds of it. The same three stages, stacked, one icon each. -->
+  <!-- A phone cannot read a 1160-unit diagram at 390px. The same three stages, stacked. -->
   <ol class="pipeline__mobile">
     <li>
       <span class="pl-m">your laravel app</span>

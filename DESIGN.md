@@ -64,8 +64,9 @@ word beside it.
 the audit.
 
 - The landing's hero figure runs a short loop — about three seconds — showing the pipeline:
-  source units enter the build, the scan sweeps the phases, packets cross to the Worker, the
-  edge ring pulses. It is compositor-only (`opacity`, `transform`), never a layout property.
+  source units enter the build, the scan sweeps the phases, packets cross to the Worker. The
+  former edge ring pulse is gone: a ring around the endpoint read as a glow, not a mechanism.
+  It is compositor-only (`opacity`, `transform`), never a layout property.
 - **The static frame is the whole figure.** Every element is visible with animations off, so a
   screenshot, a print, a reduced-motion visitor and a slow device all read the same picture;
   the loop only shows traffic moving through it. `prefers-reduced-motion: reduce` switches
@@ -93,6 +94,33 @@ the audit.
    the theme toggle. The audit has the census filter and grid. Everything else is a link.
 6. **One figure per idea.** The landing has exactly two visuals — the pipeline and the budget —
    and no section repeats another's layout.
+
+## Diagram system
+
+Onboarded from <https://github.com/cathrynlavery/diagram-design> on 2026-11-25. Every figure
+follows those editorial primitives; the site keeps its own identity where the two conflict.
+
+- **Tokens**: paper `--ground`, paper-2 `--ground-2` / `--raised`, ink `--fg`, muted
+  `--fg-muted`, rule `--line` / `--line-strong`, one accent `--accent` (`--workers`) with
+  `--fig-tint` at 10%. No second hue inside a figure: status colours stay in audit tables,
+  stats and swatches, where a word sits beside them.
+- **Focal point**: at most one accented element per figure — the compiled tier in the pipeline,
+  the native JS handler in the budget. Inside `MiniFig`, node status is weight and dash pattern
+  plus a word: solid outline = clean, medium dash = declared trade, fine dash = refusal.
+- **Geometry**: 1px hairlines, no shadow and no gradient inside a figure, radius 4/6px.
+  Structural coordinates sit on a 4px grid — `MiniFig` snaps them before both its geometry
+  guard and its render; the hero and the budget chart are authored on the grid. Connectors
+  are orthogonal, arrowheads are 8px, and a label never sits on a line.
+- **Type**: figure names in the sans stack at 600, sublabels and values in the mono stack, no
+  webfont. This is the skill's `system` font mode, not its default three-family stack: BRAND.md
+  forbids downloaded fonts. That is the one deliberate deviation.
+- **Density**: target 4/10. Delete before decorating; the caption makes the claim once, and
+  an informative SVG carries `role="img"` with prefixed `<title>` / `<desc>` ids. `MiniFig` is
+  decorative (`aria-hidden`) because its `<figcaption>` is the accessible description.
+- **Static frame**: the whole figure is visible without motion. Reduced-motion is unchanged;
+  the loop only shows traffic moving through a complete frame. Below 64rem the pipeline becomes a
+  stacked three-stage list, and below 52rem the budget becomes three rows of numbers — neither
+  diagram is allowed to shrink its labels below legibility.
 
 ## Open questions for the owner
 

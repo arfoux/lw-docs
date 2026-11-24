@@ -1,17 +1,17 @@
 {
- "generatedAt": "2026-11-22T18:43:27.394Z",
+ "generatedAt": "2026-11-24T22:49:48.558Z",
  "generator": "scripts/extract-lw.mjs",
  "auditedRepo": {
   "name": "arfoux/laravel-workers",
   "path": "../laravel-workers",
-  "head": "db95022f4652b9510cc28e656de34337592bf730",
+  "head": "89aeb291579623982d7c739f5b5a77bfd2cafd73",
   "dirtyFiles": 0,
   "version": "0.5.1",
   "files": [
    {
     "path": "README.md",
-    "sha256": "c2c0a34f9e177738",
-    "bytes": 10703,
+    "sha256": "149b27cd2ca8f6f4",
+    "bytes": 12708,
     "tracked": true
    },
    {

@@ -8,6 +8,17 @@
 // so the meaning survives with the image gone.
 const NODE_H = 26;
 
+// Structural coordinates land on a 4px grid. Figures are written at optical sizes,
+// then snapped once before both the guard and the render: nodes, connectors and label
+// positions move; font sizes stay optical. Data-derived bar widths are snapped too,
+// so they stay proportional within a figure rather than stretched across figures.
+// Halfway values go down: a node that snaps outward would leave its 300px canvas.
+const snap = (n) => Math.round((n - 1) / 4) * 4;
+const gridify = (markup) =>
+  markup
+    .replace(/(^|\s)(x|y|width|height|cx|cy|r)="(-?\d+(?:\.\d+)?)"/g, (_, lead, key, value) => `${lead}${key}="${snap(Number(value))}"`)
+    .replace(/\bd="([^"]*)"/g, (_, d) => `d="${d.replace(/-?\d+(?:\.\d+)?/g, (n) => String(snap(Number(n))))}"`);
+
 const node = (x, y, w, text, sub = null, tone = '') =>
   `<g class="f-node ${tone}"><rect x="${x}" y="${y}" width="${w}" height="${NODE_H}" rx="4"/>` +
   `<text class="f-m" x="${x + 10}" y="${y + (sub ? 12 : 17)}">${text}</text>` +
@@ -19,7 +30,7 @@ const edge = (x1, y1, x2, y2, dashed = false) =>
 
 const arrow = (x1, y1, x2, y2) => `<path class="f-arrow" d="M${x1} ${y1}H${x2}V${y2}" marker-end="url(#f-tip)"/>`;
 
-const defs = `<defs><marker id="f-tip" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l8 4-8 4z" fill="currentColor"/></marker></defs>`;
+const defs = (markerId) => `<defs><marker id="${markerId}" viewBox="0 0 8 8" refX="6" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0l8 4-8 4z" fill="currentColor"/></marker></defs>`;
 
 const label = (x, y, text, tone = '') => `<text class="f-l ${tone}" x="${x}" y="${y}">${text}</text>`;
 
@@ -313,7 +324,7 @@ const FIGS = {
         const bar = bands.map(([name, count, cls]) => {
           const w = count * scale;
           const seg = `<rect class="f-seg ${cls}" x="${x.toFixed(1)}" y="26" width="${w.toFixed(1)}" height="18" rx="2"/>
-            <text class="f-s" x="${(x + w / 2).toFixed(1)}" y="22" text-anchor="middle">${count}</text>`;
+            <text class="f-s" x="${Math.max(8, x + w / 2).toFixed(1)}" y="22" text-anchor="middle">${count}</text>`;
           x += w;
           return seg;
         }).join('');
@@ -341,12 +352,12 @@ const FIGS = {
         ['4 · CI', 'actions as run'],
         ['5 · release', 'tag to npm'],
       ].map(([name, sub], i) => {
-        const cx = 10 + i * 58;
+        const cx = 32 + i * 48;
         return (
           `<circle class="f-dot f-dot--on" cx="${cx}" cy="44" r="6"/>
            <text class="f-s" x="${cx}" y="66" text-anchor="middle">${name}</text>
            <text class="f-s f-s--muted" x="${cx}" y="80" text-anchor="middle">${sub}</text>` +
-          (i < 4 ? `<path class="f-edge" d="M${cx + 6} 44h${i === 4 ? 9 : 40}"/>` : '')
+          (i < 4 ? `<path class="f-edge" d="M${cx + 6} 44h32"/>` : '')
         );
       }).join('') +
       label(0, 100, 'findings land in the ledger, not the prose', 'f-l--muted'),
@@ -380,6 +391,11 @@ const FIGS = {
   },
 };
 
+for (const [figureName, figure] of Object.entries(FIGS)) {
+  figure.markerId = `f-tip-${figureName.replace(/[^a-z0-9-]/gi, '-')}`;
+  figure.body = gridify(figure.body.replaceAll('#f-tip', `#${figure.markerId}`));
+}
+
 // The component refuses to emit a diagram whose own geometry leaves its canvas: a text
 // label running past the right edge, or a node whose bottom falls outside the viewBox, is
 // a figure that will be clipped on the page and never noticed in a screenshot review.
@@ -394,7 +410,7 @@ const estimate = (cls, text) => {
 };
 
 const checkFigure = (figureName, figure) => {
-  const markup = defs + figure.body;
+  const markup = defs(figure.markerId) + figure.body;
   for (const match of markup.matchAll(/<text class="([^"]*)" x="([-\d.]+)" y="([-\d.]+)"[^>]*>([^<]*)<\/text>/g)) {
     const [, cls, x, y, text] = match;
     const right = Number(x) + estimate(cls, text);
@@ -424,7 +440,7 @@ if (!fig) throw new Error(`MiniFig: unknown figure "${name}"`);
       preserveAspectRatio="xMinYMin meet"
       aria-hidden="true"
       focusable="false"
-      set:html={defs + fig.body}
+      set:html={defs(fig.markerId) + fig.body}
     />
   </div>
   <figcaption>{fig.caption}</figcaption>
